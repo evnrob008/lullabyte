@@ -3,22 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>LullaByte</title>
+  <title>Milk &amp; Moon</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #FDF8F3; font-family: 'DM Sans', sans-serif; }
+    body { margin: 0; padding: 0; background: #FDF8F3; font-family: 'Figtree', sans-serif; }
     #root { min-height: 100vh; }
+    #error { display:none; background:#fee; color:#c00; padding:20px; font-family:monospace; font-size:13px; white-space:pre-wrap; }
   </style>
 </head>
 <body>
+  <div id="error"></div>
   <div id="root"></div>
-  <script type="text/babel" data-presets="react">
-import { useState, useEffect, useCallback } from "react";
+  <script>
+window.onerror = function(msg,src,line,col,err) {
+  var el = document.getElementById('error');
+  el.style.display = 'block';
+  el.textContent = 'ERROR: ' + msg + '\nLine: ' + line + '\n' + (err ? err.stack : '');
+};
+  </script>
+  <script>
+const { useState, useEffect, useCallback, useRef } = React;
 
-// ─── Palette & helpers ───────────────────────────────────────────────────────
+var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 const PAL = {
   bg: "#FDF8F3",
   card: "#FFFFFF",
@@ -35,288 +62,169 @@ const PAL = {
   feed: "#D4A8C4",
   feedLight: "#F8EAF3",
   wake: "#C4D4A8",
-  wakeLight: "#F3F8EA",
+  wakeLight: "#F3F8EA"
 };
-
-const fmt12 = (d) => {
-  if (!d) return "";
-  const h = d.getHours(), m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hh = h % 12 || 12;
-  return `${hh}:${String(m).padStart(2, "0")} ${ampm}`;
+const AppLogo = ({ size = 64 }) => {
+  const r = size * 0.22;
+  return /* @__PURE__ */ React.createElement("svg", { width: size, height: size, viewBox: "0 0 64 64", fill: "none", xmlns: "http://www.w3.org/2000/svg" }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("linearGradient", { id: "logoGrad", x1: "0", y1: "0", x2: "1", y2: "1" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: "#A8C4D4" }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: "#7C9E8A" })), /* @__PURE__ */ React.createElement("linearGradient", { id: "moonGrad", x1: "0", y1: "0", x2: "0", y2: "1" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: "#FFF8F0" }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: "#F0EBE3" }))), /* @__PURE__ */ React.createElement("rect", { width: "64", height: "64", rx: "16", fill: "url(#logoGrad)" }), /* @__PURE__ */ React.createElement("rect", { x: "24", y: "28", width: "16", height: "22", rx: "5", fill: "white", fillOpacity: "0.95" }), /* @__PURE__ */ React.createElement("rect", { x: "27", y: "21", width: "10", height: "9", rx: "3", fill: "white", fillOpacity: "0.85" }), /* @__PURE__ */ React.createElement("rect", { x: "29.5", y: "17", width: "5", height: "6", rx: "2.5", fill: "white", fillOpacity: "0.7" }), /* @__PURE__ */ React.createElement("rect", { x: "24", y: "36", width: "16", height: "7", rx: "0", fill: "white", fillOpacity: "0.2" }), /* @__PURE__ */ React.createElement("circle", { cx: "14", cy: "13", r: "2", fill: "white", fillOpacity: "0.5" }), /* @__PURE__ */ React.createElement("circle", { cx: "51", cy: "11", r: "1.5", fill: "white", fillOpacity: "0.4" }), /* @__PURE__ */ React.createElement("circle", { cx: "53", cy: "50", r: "1.5", fill: "white", fillOpacity: "0.35" }));
 };
-
-const fmt12str = (timeStr) => {
-  if (!timeStr) return "";
-  const [h, m] = timeStr.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hh = h % 12 || 12;
-  return `${hh}:${String(m).padStart(2, "0")} ${ampm}`;
-};
-
-const strToDate = (timeStr, base = new Date()) => {
-  const d = new Date(base);
-  const [h, m] = timeStr.split(":").map(Number);
-  d.setHours(h, m, 0, 0);
-  return d;
-};
-
-const addMins = (date, mins) => new Date(date.getTime() + mins * 60000);
-
-const diffMins = (a, b) => Math.round((b - a) / 60000);
-
-const toTimeInput = (date) => {
-  if (!date) return "";
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-};
-
-const durationLabel = (mins) => {
-  if (mins < 60) return `${mins}m`;
-  return `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? (mins % 60) + "m" : ""}`.trim();
-};
-
-// ─── Auth Screen ─────────────────────────────────────────────────────────────
-// ─── Onboarding Screen ────────────────────────────────────────────────────────
 function OnboardingScreen({ onComplete }) {
-  const [step, setStep] = useState(0); // 0 = baby info, 1 = schedule settings
-
-  // Baby info
-  const [babyName, setBabyName] = useState('');
-  const [gender, setGender] = useState('');
-  const [ageMonths, setAgeMonths] = useState('');
-
-  // Schedule settings (pre-filled with defaults)
-  const [s, setS] = useState({ ...DEFAULT_SETTINGS });
+  const [step, setStep] = useState(0);
+  const [babyName, setBabyName] = useState("");
+  const [gender, setGender] = useState("");
+  const [ageMonths, setAgeMonths] = useState("");
+  const [s, setS] = useState(__spreadValues({}, DEFAULT_SETTINGS));
   const [raw, setRaw] = useState({});
-
   const inp = {
-    width: '100%', padding: '12px 14px', borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: 'inherit',
-    outline: 'none', boxSizing: 'border-box',
+    width: "100%",
+    padding: "12px 14px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-
   const getDisplayValue = (key, type) => {
-    if (raw[key] !== undefined) return raw[key];
-    return type === 'number' ? (s[key] === 0 ? '' : s[key]) : s[key];
+    if (raw[key] !== void 0) return raw[key];
+    return type === "number" ? s[key] === 0 ? "" : s[key] : s[key];
   };
-
-  const numField = (key, label, unit) => (
-    <div key={key}>
-      <label style={{ fontSize: 13, color: PAL.muted, display: 'block', marginBottom: 4 }}>{label}</label>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input style={{ ...inp, flex: 1 }} type="number" value={getDisplayValue(key, 'number')}
-          onChange={e => { setRaw(r => ({ ...r, [key]: e.target.value })); if (e.target.value !== '') setS(p => ({ ...p, [key]: Number(e.target.value) })); }}
-          onBlur={() => { setRaw(r => { const n = { ...r }; delete n[key]; return n; }); if (raw[key] === '') setS(p => ({ ...p, [key]: 0 })); }}
-        />
-        {unit && <span style={{ fontSize: 13, color: PAL.muted, whiteSpace: 'nowrap' }}>{unit}</span>}
-      </div>
-    </div>
-  );
-
+  const numField = (key, label, unit) => /* @__PURE__ */ React.createElement("div", { key }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 4 } }, label), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      style: __spreadProps(__spreadValues({}, inp), { flex: 1 }),
+      type: "number",
+      value: getDisplayValue(key, "number"),
+      onChange: (e) => {
+        setRaw((r) => __spreadProps(__spreadValues({}, r), { [key]: e.target.value }));
+        if (e.target.value !== "") setS((p) => __spreadProps(__spreadValues({}, p), { [key]: Number(e.target.value) }));
+      },
+      onBlur: () => {
+        setRaw((r) => {
+          const n = __spreadValues({}, r);
+          delete n[key];
+          return n;
+        });
+        if (raw[key] === "") setS((p) => __spreadProps(__spreadValues({}, p), { [key]: 0 }));
+      }
+    }
+  ), unit && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted, whiteSpace: "nowrap" } }, unit)));
   const btnStyle = {
-    width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-    background: PAL.primary, color: '#fff', fontSize: 16, fontWeight: 700,
-    cursor: 'pointer', fontFamily: 'inherit', marginTop: 8,
+    width: "100%",
+    padding: "14px",
+    borderRadius: 12,
+    border: "none",
+    background: PAL.primary,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    marginTop: 8
   };
-
-  const step0Valid = babyName.trim() && gender && ageMonths !== '';
-
-  return (
-    <div style={{ minHeight: '100vh', background: PAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🌙</div>
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 28, color: PAL.text, margin: 0 }}>Welcome to LullaByte</h1>
-          <p style={{ color: PAL.muted, marginTop: 6, fontSize: 14 }}>
-            {step === 0 ? "Tell us about your baby" : "Set your default schedule"}
-          </p>
-        </div>
-
-        {/* Progress dots */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
-          {[0, 1].map(n => (
-            <div key={n} style={{ width: n === step ? 24 : 8, height: 8, borderRadius: 4, background: n === step ? PAL.primary : PAL.border, transition: 'all 0.2s' }} />
-          ))}
-        </div>
-
-        <div style={{ background: PAL.card, borderRadius: 20, padding: 28, boxShadow: '0 4px 32px rgba(0,0,0,0.06)' }}>
-          {step === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label style={{ fontSize: 13, color: PAL.muted, display: 'block', marginBottom: 4 }}>Baby's name</label>
-                <input style={inp} placeholder="e.g. Olivia" value={babyName} onChange={e => setBabyName(e.target.value)} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: PAL.muted, display: 'block', marginBottom: 8 }}>Gender</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[['girl', '👧 Girl'], ['boy', '👦 Boy'], ['other', '🌟 Other']].map(([val, label]) => (
-                    <button key={val} onClick={() => setGender(val)} style={{
-                      flex: 1, padding: '10px 4px', borderRadius: 10, border: `1.5px solid ${gender === val ? PAL.primary : PAL.border}`,
-                      background: gender === val ? PAL.soft : PAL.card, color: gender === val ? PAL.primary : PAL.muted,
-                      fontWeight: gender === val ? 700 : 500, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
-                    }}>{label}</button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: PAL.muted, display: 'block', marginBottom: 4 }}>Age (months)</label>
-                <input style={inp} type="number" min="0" max="36" placeholder="e.g. 4" value={ageMonths} onChange={e => setAgeMonths(e.target.value)} />
-              </div>
-              <button style={{ ...btnStyle, opacity: step0Valid ? 1 : 0.4 }} disabled={!step0Valid} onClick={() => setStep(1)}>
-                Next →
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 13, color: PAL.muted, display: 'block', marginBottom: 4 }}>Morning wake time</label>
-                <input style={inp} type="time" value={s.wakeTime} onChange={e => setS(p => ({ ...p, wakeTime: e.target.value }))} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: PAL.muted, display: 'block', marginBottom: 4 }}>Bedtime</label>
-                <input style={inp} type="time" value={s.bedTime} onChange={e => setS(p => ({ ...p, bedTime: e.target.value }))} />
-              </div>
-              {numField('numNaps', 'Number of naps', 'naps')}
-              {numField('wakeWindowMins', 'Wake window', 'min')}
-              {numField('napDurationMins', 'Nap duration', 'min')}
-              {numField('bedtimeToleranceMins', 'Bedtime tolerance', 'min')}
-              {numField('bridgingNapMins', 'Bridging nap duration', 'min')}
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button onClick={() => setStep(0)} style={{ flex: 1, padding: '14px', borderRadius: 12, border: `1.5px solid ${PAL.border}`, background: 'transparent', color: PAL.muted, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ← Back
-                </button>
-                <button style={{ ...btnStyle, flex: 2, marginTop: 0 }} onClick={() => {
-                  const baby = { name: babyName.trim(), gender, ageMonths: Number(ageMonths) };
-                  onComplete(baby, s);
-                }}>
-                  Get Started 🌙
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  const step0Valid = babyName.trim() && gender && ageMonths !== "";
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 400 } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 32 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 64 }), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 28, color: PAL.text, margin: 0 } }, "Welcome to Milk & Moon"), /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, marginTop: 6, fontSize: 14 } }, step === 0 ? "Tell us about your baby" : "Set your default schedule")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, marginBottom: 28 } }, [0, 1].map((n) => /* @__PURE__ */ React.createElement("div", { key: n, style: { width: n === step ? 24 : 8, height: 8, borderRadius: 4, background: n === step ? PAL.primary : PAL.border, transition: "all 0.2s" } }))), /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: 20, padding: 28, boxShadow: "0 4px 32px rgba(0,0,0,0.06)" } }, step === 0 ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 4 } }, "Baby's name"), /* @__PURE__ */ React.createElement("input", { style: inp, placeholder: "e.g. Olivia", value: babyName, onChange: (e) => setBabyName(e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 8 } }, "Gender"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, [["girl", "\u{1F467} Girl"], ["boy", "\u{1F466} Boy"], ["other", "\u{1F31F} Other"]].map(([val, label]) => /* @__PURE__ */ React.createElement("button", { key: val, onClick: () => setGender(val), style: {
+    flex: 1,
+    padding: "10px 4px",
+    borderRadius: 10,
+    border: `1.5px solid ${gender === val ? PAL.primary : PAL.border}`,
+    background: gender === val ? PAL.soft : PAL.card,
+    color: gender === val ? PAL.primary : PAL.muted,
+    fontWeight: gender === val ? 700 : 500,
+    cursor: "pointer",
+    fontSize: 13,
+    fontFamily: "inherit"
+  } }, label)))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 4 } }, "Age (months)"), /* @__PURE__ */ React.createElement("input", { style: inp, type: "number", min: "0", max: "36", placeholder: "e.g. 4", value: ageMonths, onChange: (e) => setAgeMonths(e.target.value) })), /* @__PURE__ */ React.createElement("button", { style: __spreadProps(__spreadValues({}, btnStyle), { opacity: step0Valid ? 1 : 0.4 }), disabled: !step0Valid, onClick: () => setStep(1) }, "Next \u2192")) : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 4 } }, "Morning wake time"), /* @__PURE__ */ React.createElement("input", { style: inp, type: "time", value: s.wakeTime, onChange: (e) => setS((p) => __spreadProps(__spreadValues({}, p), { wakeTime: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 4 } }, "Bedtime"), /* @__PURE__ */ React.createElement("input", { style: inp, type: "time", value: s.bedTime, onChange: (e) => setS((p) => __spreadProps(__spreadValues({}, p), { bedTime: e.target.value })) })), numField("numNaps", "Number of naps", "naps"), numField("wakeWindowMins", "Wake window", "min"), numField("napDurationMins", "Nap duration", "min"), numField("bedtimeToleranceMins", "Bedtime tolerance", "min"), numField("bridgingNapMins", "Bridging nap duration", "min"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 4 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setStep(0), style: { flex: 1, padding: "14px", borderRadius: 12, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "\u2190 Back"), /* @__PURE__ */ React.createElement("button", { style: __spreadProps(__spreadValues({}, btnStyle), { flex: 2, marginTop: 0 }), onClick: () => {
+    const baby = { name: babyName.trim(), gender, ageMonths: Number(ageMonths) };
+    onComplete(baby, s);
+  } }, "Get Started \u2728"))))));
 }
-
 function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login"); // login | register
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-
   const handle = () => {
     if (!email) return;
     onAuth({ name: name || email.split("@")[0], email });
   };
-
   const btnStyle = {
-    width: "100%", padding: "14px", borderRadius: 12, border: "none",
-    background: PAL.primary, color: "#fff", fontSize: 16, fontWeight: 700,
-    cursor: "pointer", fontFamily: "inherit",
+    width: "100%",
+    padding: "14px",
+    borderRadius: 12,
+    border: "none",
+    background: PAL.primary,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit"
   };
-
   const inputStyle = {
-    width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box",
+    width: "100%",
+    padding: "12px 14px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-
-  return (
-    <div style={{ minHeight: "100vh", background: PAL.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "100%", maxWidth: 380 }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🌙</div>
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 32, color: PAL.text, margin: 0 }}>LullaByte</h1>
-          <p style={{ color: PAL.muted, marginTop: 6, fontSize: 15 }}>Baby sleep & feed tracker</p>
-        </div>
-
-        <div style={{ background: PAL.card, borderRadius: 20, padding: 28, boxShadow: "0 4px 32px rgba(0,0,0,0.06)" }}>
-          <div style={{ display: "flex", marginBottom: 24, background: PAL.soft, borderRadius: 10, padding: 4 }}>
-            {["login", "register"].map(m => (
-              <button key={m} onClick={() => setMode(m)} style={{
-                flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
-                background: mode === m ? PAL.card : "transparent",
-                color: mode === m ? PAL.primary : PAL.muted,
-                fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "inherit",
-                boxShadow: mode === m ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
-              }}>
-                {m === "login" ? "Sign In" : "Create Account"}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {mode === "register" && (
-              <input style={inputStyle} placeholder="Your name" value={name} onChange={e => setName(e.target.value)} />
-            )}
-            <input style={inputStyle} type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} />
-            <input style={inputStyle} type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-            <button style={btnStyle} onClick={handle}>
-              {mode === "login" ? "Sign In" : "Create Account"}
-            </button>
-          </div>
-
-          <div style={{ margin: "20px 0", textAlign: "center", color: PAL.muted, fontSize: 13 }}>or continue with</div>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            {[{ icon: "🍎", label: "Apple" }, { icon: "G", label: "Google" }].map(p => (
-              <button key={p.label} onClick={handle} style={{
-                flex: 1, padding: "11px 0", borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-                background: PAL.card, color: PAL.text, fontWeight: 600, cursor: "pointer",
-                fontSize: 14, fontFamily: "inherit", display: "flex", alignItems: "center",
-                justifyContent: "center", gap: 6,
-              }}>
-                <span style={{ fontSize: 16 }}>{p.icon}</span> {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 380 } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 40 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 64 }), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 32, color: PAL.text, margin: 0 } }, "Milk & Moon"), /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, marginTop: 6, fontSize: 15 } }, "Baby sleep & feed tracker")), /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: 20, padding: 28, boxShadow: "0 4px 32px rgba(0,0,0,0.06)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", marginBottom: 24, background: PAL.soft, borderRadius: 10, padding: 4 } }, ["login", "register"].map((m) => /* @__PURE__ */ React.createElement("button", { key: m, onClick: () => setMode(m), style: {
+    flex: 1,
+    padding: "8px 0",
+    borderRadius: 8,
+    border: "none",
+    background: mode === m ? PAL.card : "transparent",
+    color: mode === m ? PAL.primary : PAL.muted,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 14,
+    fontFamily: "inherit",
+    boxShadow: mode === m ? "0 2px 8px rgba(0,0,0,0.08)" : "none"
+  } }, m === "login" ? "Sign In" : "Create Account"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, mode === "register" && /* @__PURE__ */ React.createElement("input", { style: inputStyle, placeholder: "Your name", value: name, onChange: (e) => setName(e.target.value) }), /* @__PURE__ */ React.createElement("input", { style: inputStyle, type: "email", placeholder: "Email address", value: email, onChange: (e) => setEmail(e.target.value) }), /* @__PURE__ */ React.createElement("input", { style: inputStyle, type: "password", placeholder: "Password", value: password, onChange: (e) => setPassword(e.target.value) }), /* @__PURE__ */ React.createElement("button", { style: btnStyle, onClick: handle }, mode === "login" ? "Sign In" : "Create Account")), /* @__PURE__ */ React.createElement("div", { style: { margin: "20px 0", textAlign: "center", color: PAL.muted, fontSize: 13 } }, "or continue with"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, [{ icon: "\u{1F34E}", label: "Apple" }, { icon: "G", label: "Google" }].map((p) => /* @__PURE__ */ React.createElement("button", { key: p.label, onClick: handle, style: {
+    flex: 1,
+    padding: "11px 0",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    background: PAL.card,
+    color: PAL.text,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 14,
+    fontFamily: "inherit",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, p.icon), " ", p.label))))));
 }
-
-// ─── Schedule Generator ───────────────────────────────────────────────────────
-// Rules:
-//  • Try to fit ALL numNaps requested. Reduce WW evenly (max 15%) if needed.
-//  • If still can't fit, reduce nap count. Shorten naps progressively (min 20min).
-//  • Only add a BRIDGING nap if all numNaps fit AND there is still excess awake time.
-//  • Bridging nap duration: bridgingNapMins ≤ bridge ≤ napDurationMins.
-//  • Excess slack beyond a full bridging nap shifts bedtime earlier.
 function generateSchedule({ wakeTime, bedTime, numNaps, wakeWindowMins, napDurationMins, bridgingNapMins = 20 }) {
   const wakeDate = strToDate(wakeTime);
-  const bedDate  = strToDate(bedTime);
+  const bedDate = strToDate(bedTime);
   if (bedDate <= wakeDate) bedDate.setDate(bedDate.getDate() + 1);
-
-  const available  = diffMins(wakeDate, bedDate);
-  const minWW      = Math.floor(wakeWindowMins * 0.85);
-  const minNapDur  = 20;
-
-  let actualWW  = wakeWindowMins;
-  let n         = numNaps;
-  let napDurs   = Array(n).fill(napDurationMins);
+  const available = diffMins(wakeDate, bedDate);
+  const minWW = Math.floor(wakeWindowMins * 0.85);
+  const minNapDur = 20;
+  let actualWW = wakeWindowMins;
+  let n = numNaps;
+  let napDurs = Array(n).fill(napDurationMins);
   let bridgeDur = null;
-
-  // ── Step 1: fit all numNaps by reducing WW if needed ─────────────────────
-  // Required: (n+1)*ww + n*nap = available  →  ww = (available - n*nap) / (n+1)
   const wwForAll = (available - n * napDurationMins) / (n + 1);
   if (wwForAll >= minWW) {
-    // All requested naps fit — use evenly distributed WW, no bridging needed
     actualWW = wwForAll;
   } else {
-    // Can't fit all naps even at min WW — reduce nap count until they fit
     while (n > 0 && (n + 1) * minWW + n * napDurationMins > available) n--;
     actualWW = minWW;
-
     if (n > 0) {
-      // Shorten naps progressively (last first) if still needed
       const wwExact = (available - n * napDurationMins) / (n + 1);
       if (wwExact >= minWW) {
         actualWW = wwExact;
       } else {
-        // Need to shorten naps too
         const totalNapRoom = available - (n + 1) * minWW;
         const totalNap = Math.max(n * minNapDur, Math.min(n * napDurationMins, totalNapRoom));
         const perNap = Math.floor(totalNap / n);
@@ -325,9 +233,6 @@ function generateSchedule({ wakeTime, bedTime, numNaps, wakeWindowMins, napDurat
         actualWW = minWW;
       }
     }
-
-    // ── Only add bridging nap if n == numNaps AND slack remains ──────────────
-    // (if n was reduced, the dropped naps are just gone — no bridging)
     if (n === numNaps) {
       const slack = available - (n + 1) * actualWW - napDurs.reduce((a, b) => a + b, 0);
       if (slack > 0) {
@@ -336,17 +241,9 @@ function generateSchedule({ wakeTime, bedTime, numNaps, wakeWindowMins, napDurat
       }
     }
   }
-
-  // ── Step 2: check for slack when all naps fit at requested WW ────────────
-  // (wwForAll >= minWW path — may still have slack if we used exact wwForAll)
-  // No bridging needed in this path: WW was adjusted to use all available time exactly.
-
-  // ── Step 3: build events ──────────────────────────────────────────────────
   const events = [];
-  events.push({ id: 'wake-0', type: 'wake', label: 'Wake Up', start: new Date(wakeDate), end: null, editable: true });
-
+  events.push({ id: "wake-0", type: "wake", label: "Wake Up", start: new Date(wakeDate), end: null, editable: true });
   let cursor = new Date(wakeDate);
-  // Pre-compute nap start times
   let tempCursor = new Date(wakeDate);
   const allNapStarts = [];
   for (let i = 0; i < n; i++) {
@@ -355,355 +252,269 @@ function generateSchedule({ wakeTime, bedTime, numNaps, wakeWindowMins, napDurat
     tempCursor = addMins(ns, napDurs[i]);
   }
   const bridgeStart = bridgeDur !== null ? addMins(tempCursor, actualWW) : null;
-
   for (let i = 0; i < n; i++) {
     const napStart = allNapStarts[i];
-    const napEnd   = addMins(napStart, napDurs[i]);
-    events.push({ id: `wake-${i + 1}`, type: 'wake', label: `Wake Window ${i + 1}`, start: new Date(cursor), end: napStart, editable: false });
-    events.push({ id: `nap-${i}`, type: 'nap', label: `Nap ${i + 1}`, start: napStart, end: napEnd, editable: true, originalDurationMins: napDurationMins });
+    const napEnd = addMins(napStart, napDurs[i]);
+    events.push({ id: `wake-${i + 1}`, type: "wake", label: `Wake Window ${i + 1}`, start: new Date(cursor), end: napStart, editable: false });
+    events.push({ id: `nap-${i}`, type: "nap", label: `Nap ${i + 1}`, start: napStart, end: napEnd, editable: true, originalDurationMins: napDurationMins });
     cursor = napEnd;
   }
-
   if (bridgeDur !== null) {
     const bridgeEnd = addMins(bridgeStart, bridgeDur);
-    events.push({ id: `wake-bridge-pre`, type: 'wake', label: `Wake Window ${n + 1}`, start: new Date(cursor), end: bridgeStart, editable: false });
-    events.push({ id: 'nap-bridge', type: 'nap', label: 'Bridging Nap', start: bridgeStart, end: bridgeEnd, editable: true, originalDurationMins: bridgeDur, isBridging: true });
+    events.push({ id: `wake-bridge-pre`, type: "wake", label: `Wake Window ${n + 1}`, start: new Date(cursor), end: bridgeStart, editable: false });
+    events.push({ id: "nap-bridge", type: "nap", label: "Bridging Nap", start: bridgeStart, end: bridgeEnd, editable: true, originalDurationMins: bridgeDur, isBridging: true });
     cursor = bridgeEnd;
   }
-
   const totalNaps = n + (bridgeDur !== null ? 1 : 0);
-  events.push({ id: 'wake-final', type: 'wake', label: `Wake Window ${totalNaps + 1}`, start: new Date(cursor), end: new Date(bedDate), editable: false });
-  events.push({ id: 'bed', type: 'sleep', label: 'Bedtime', start: new Date(bedDate), end: null, editable: true, originalFinalWW: actualWW });
+  events.push({ id: "wake-final", type: "wake", label: `Wake Window ${totalNaps + 1}`, start: new Date(cursor), end: new Date(bedDate), editable: false });
+  events.push({ id: "bed", type: "sleep", label: "Bedtime", start: new Date(bedDate), end: null, editable: true, originalFinalWW: actualWW });
   return events;
 }
-
-
 function rebuildFromIndex(events, fromIdx, settings) {
+  var _a;
   const {
     wakeWindowMins,
     napDurationMins,
     bedTime,
     wakeTime,
     bridgingNapMins = 20,
-    bedtimeToleranceMins = 60,
+    bedtimeToleranceMins = 60
   } = settings;
-
-  const minWW     = Math.floor(wakeWindowMins * 0.85);
+  const minWW = Math.floor(wakeWindowMins * 0.85);
   const minNapDur = 20;
-
   const targetBed = strToDate(bedTime);
   if (targetBed <= strToDate(wakeTime)) targetBed.setDate(targetBed.getDate() + 1);
-
-  // Use the wake window the schedule was actually generated with
-  const bedEvent    = events.find(e => e.id === 'bed');
-  const scheduledWW = bedEvent?.scheduledWW ?? wakeWindowMins;
-
-  const prefix       = events.slice(0, fromIdx + 1).map(e => ({ ...e }));
-  const startCursor  = new Date(prefix[fromIdx].end || prefix[fromIdx].start);
-  const remainingRegularNaps = events.slice(fromIdx + 1).filter(e => e.type === 'nap' && !e.isBridging);
-
-  // ── Step 1: fit all remaining regular naps ────────────────────────────────
+  const bedEvent = events.find((e) => e.id === "bed");
+  const scheduledWW = (_a = bedEvent == null ? void 0 : bedEvent.scheduledWW) != null ? _a : wakeWindowMins;
+  const prefix = events.slice(0, fromIdx + 1).map((e) => __spreadValues({}, e));
+  const startCursor = new Date(prefix[fromIdx].end || prefix[fromIdx].start);
+  const remainingRegularNaps = events.slice(fromIdx + 1).filter((e) => e.type === "nap" && !e.isBridging);
   const available = diffMins(startCursor, targetBed);
-  let n       = remainingRegularNaps.length;
-  let napDurs = remainingRegularNaps.map(r => r.originalDurationMins || napDurationMins);
+  let n = remainingRegularNaps.length;
+  let napDurs = remainingRegularNaps.map((r) => r.originalDurationMins || napDurationMins);
   let actualWW = scheduledWW;
-
   if (n > 0) {
-    const wwForAll = (available - napDurs.slice(0,n).reduce((a,b)=>a+b,0)) / (n + 1);
+    const wwForAll = (available - napDurs.slice(0, n).reduce((a, b) => a + b, 0)) / (n + 1);
     if (wwForAll >= minWW) {
-      actualWW = wwForAll; // distribute evenly, all naps fit
+      actualWW = wwForAll;
     } else {
-      // Reduce nap count until they fit at minWW
-      while (n > 0 && (n + 1) * minWW + napDurs.slice(0,n).reduce((a,b)=>a+b,0) > available) {
+      while (n > 0 && (n + 1) * minWW + napDurs.slice(0, n).reduce((a, b) => a + b, 0) > available) {
         n--;
         napDurs = napDurs.slice(0, n);
       }
       if (n > 0) {
-        const wwExact = (available - napDurs.reduce((a,b)=>a+b,0)) / (n + 1);
+        const wwExact = (available - napDurs.reduce((a, b) => a + b, 0)) / (n + 1);
         actualWW = Math.min(wakeWindowMins, wwExact >= minWW ? wwExact : minWW);
       }
     }
-    // Never exceed wakeWindowMins
     actualWW = Math.min(actualWW, wakeWindowMins);
   }
-
-  // ── Step 2: compute last nap end and natural bedtime ──────────────────────
-  // Wake windows are FIXED at wakeWindowMins (or actualWW, whichever is lower).
-  // Natural bedtime = lastNapEnd + wakeWindowMins (always fixed final WW).
   let cur = 0;
   for (let i = 0; i < n; i++) cur += actualWW + napDurs[i];
-  const lastNapEnd   = addMins(startCursor, cur);
-  const naturalBed   = addMins(lastNapEnd, wakeWindowMins); // final WW always = wakeWindowMins
-  const bedDiff      = diffMins(naturalBed, targetBed); // +ve = natural bed before target
-
-  // ── Step 3: bridging nap ──────────────────────────────────────────────────
-  // Wake windows are a MAXIMUM (not exact) — they can be shorter if needed.
-  // Bridge added when bedtime would be more than tolerance before target.
-  // Total time from lastNapEnd to targetBed = wwBefore + bridgeDur + wwAfter
-  // Minimise bridgeDur (use bridgingNapMins), split remaining equally as wake windows.
-  // Wake windows must not exceed wakeWindowMins.
-  let bridgeDur    = null;
+  const lastNapEnd = addMins(startCursor, cur);
+  const naturalBed = addMins(lastNapEnd, wakeWindowMins);
+  const bedDiff = diffMins(naturalBed, targetBed);
+  let bridgeDur = null;
   let wwBeforeBridge = wakeWindowMins;
-  let wwAfterBridge  = wakeWindowMins;
+  let wwAfterBridge = wakeWindowMins;
   const totalAvail = diffMins(lastNapEnd, targetBed);
   if (bedDiff > bedtimeToleranceMins && totalAvail >= bridgingNapMins + 2) {
-    // Use minimum bridge duration, split remaining time equally as wake windows
     const minBridge = bridgingNapMins;
-    const maxBridge = Math.min(napDurationMins, totalAvail - 2); // leave at least 1 min each side
+    const maxBridge = Math.min(napDurationMins, totalAvail - 2);
     bridgeDur = Math.min(maxBridge, Math.max(minBridge, totalAvail - 2 * wakeWindowMins));
     if (bridgeDur < minBridge) bridgeDur = null;
     else {
-      // Split remaining time equally as pre/post bridge wake windows (capped at wakeWindowMins)
       const remainingForWW = totalAvail - bridgeDur;
       wwBeforeBridge = Math.min(wakeWindowMins, Math.floor(remainingForWW / 2));
-      wwAfterBridge  = Math.min(wakeWindowMins, remainingForWW - wwBeforeBridge);
+      wwAfterBridge = Math.min(wakeWindowMins, remainingForWW - wwBeforeBridge);
     }
   }
-
-  // ── Step 4: build events ──────────────────────────────────────────────────
-  const newItems  = [];
+  const newItems = [];
   let buildCursor = new Date(startCursor);
-  let wwNum       = prefix.filter(e => e.type === 'wake' && e.id !== 'wake-0').length;
-
+  let wwNum = prefix.filter((e) => e.type === "wake" && e.id !== "wake-0").length;
   for (let i = 0; i < n; i++) {
     const napStart = addMins(buildCursor, actualWW);
-    const napEnd   = addMins(napStart, napDurs[i]);
+    const napEnd = addMins(napStart, napDurs[i]);
     wwNum++;
-    newItems.push({ id: `wake-r-${i}-pre-${napStart.getTime()}`, type: 'wake', label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: napStart, editable: false });
-    newItems.push({ ...remainingRegularNaps[i], start: napStart, end: napEnd, adjustedDur: undefined });
+    newItems.push({ id: `wake-r-${i}-pre-${napStart.getTime()}`, type: "wake", label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: napStart, editable: false });
+    newItems.push(__spreadProps(__spreadValues({}, remainingRegularNaps[i]), { start: napStart, end: napEnd, adjustedDur: void 0 }));
     buildCursor = napEnd;
   }
-
   if (bridgeDur !== null) {
     const bridgeStart = addMins(buildCursor, wwBeforeBridge);
-    const bridgeEnd   = addMins(bridgeStart, bridgeDur);
+    const bridgeEnd = addMins(bridgeStart, bridgeDur);
     wwNum++;
-    newItems.push({ id: `wake-r-bridge-pre-${bridgeStart.getTime()}`, type: 'wake', label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: bridgeStart, editable: false });
-    newItems.push({ id: `nap-bridge-${Date.now()}`, type: 'nap', label: 'Bridging Nap', start: bridgeStart, end: bridgeEnd, editable: true, originalDurationMins: bridgeDur, isBridging: true });
+    newItems.push({ id: `wake-r-bridge-pre-${bridgeStart.getTime()}`, type: "wake", label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: bridgeStart, editable: false });
+    newItems.push({ id: `nap-bridge-${Date.now()}`, type: "nap", label: "Bridging Nap", start: bridgeStart, end: bridgeEnd, editable: true, originalDurationMins: bridgeDur, isBridging: true });
     buildCursor = bridgeEnd;
   }
-
   wwNum++;
   const finalWWDur = bridgeDur !== null ? wwAfterBridge : wakeWindowMins;
-  const finalBed = addMins(buildCursor, finalWWDur); // final WW
-  newItems.push({ id: `wake-r-final-${buildCursor.getTime()}`, type: 'wake', label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: finalBed, editable: false });
-
+  const finalBed = addMins(buildCursor, finalWWDur);
+  newItems.push({ id: `wake-r-final-${buildCursor.getTime()}`, type: "wake", label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: finalBed, editable: false });
   return [
     ...prefix,
     ...newItems,
-    { id: 'bed', type: 'sleep', label: 'Bedtime', start: finalBed, end: null, editable: true, originalFinalWW: wakeWindowMins, scheduledWW: actualWW },
+    { id: "bed", type: "sleep", label: "Bedtime", start: finalBed, end: null, editable: true, originalFinalWW: wakeWindowMins, scheduledWW: actualWW }
   ];
 }
-
-// ─── Feed Log Modal ───────────────────────────────────────────────────────────
 function FeedModal({ onSave, onClose, initial }) {
-  const [type, setType] = useState(initial?.type || "formula");
-  const [offered, setOffered] = useState(initial?.offered || "");
-  const [consumed, setConsumed] = useState(initial?.consumed || "");
-  const [time, setTime] = useState(initial?.time || toTimeInput(new Date()));
-  const [unit, setUnit] = useState(initial?.unit || "oz");
-  const [side, setSide] = useState(initial?.side || "left");
-  const [duration, setDuration] = useState(initial?.duration || "");
-
+  const [type, setType] = useState((initial == null ? void 0 : initial.type) || "formula");
+  const [offered, setOffered] = useState((initial == null ? void 0 : initial.offered) || "");
+  const [consumed, setConsumed] = useState((initial == null ? void 0 : initial.consumed) || "");
+  const [time, setTime] = useState((initial == null ? void 0 : initial.time) || toTimeInput(/* @__PURE__ */ new Date()));
+  const [unit, setUnit] = useState((initial == null ? void 0 : initial.unit) || "oz");
+  const [side, setSide] = useState((initial == null ? void 0 : initial.side) || "left");
+  const [duration, setDuration] = useState((initial == null ? void 0 : initial.duration) || "");
   const isBreast = type === "breast";
-
   const save = () => {
-    onSave({ id: initial?.id || Date.now(), type, offered: isBreast ? null : Number(offered), consumed: isBreast ? null : Number(consumed), time, unit, side: isBreast ? side : null, duration: isBreast ? Number(duration) : null });
+    onSave({ id: (initial == null ? void 0 : initial.id) || Date.now(), type, offered: isBreast ? null : Number(offered), consumed: isBreast ? null : Number(consumed), time, unit, side: isBreast ? side : null, duration: isBreast ? Number(duration) : null });
     onClose();
   };
-
   const inp = {
-    width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-
-  return (
-    <Overlay onClose={onClose}>
-      <h3 style={{ margin: "0 0 18px", fontFamily: "'Playfair Display',Georgia,serif", color: PAL.text }}>Log Feed</h3>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["formula", "breast"].map(t => (
-          <button key={t} onClick={() => setType(t)} style={{
-            flex: 1, padding: "9px 0", borderRadius: 9, border: "none",
-            background: type === t ? PAL.feed : PAL.soft, color: type === t ? "#fff" : PAL.muted,
-            fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "inherit",
-          }}>{t === "formula" ? "🍼 Formula" : "🤱 Breast"}</button>
-        ))}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <label style={{ fontSize: 13, color: PAL.muted }}>Time
-          <input type="time" style={{ ...inp, display: "block", marginTop: 4 }} value={time} onChange={e => setTime(e.target.value)} />
-        </label>
-        {isBreast ? (<>
-          <label style={{ fontSize: 13, color: PAL.muted }}>Side
-            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              {["left", "right", "both"].map(s => (
-                <button key={s} onClick={() => setSide(s)} style={{
-                  flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
-                  background: side === s ? PAL.feed : PAL.soft, color: side === s ? "#fff" : PAL.muted,
-                  fontWeight: 600, cursor: "pointer", fontSize: 13, fontFamily: "inherit",
-                }}>{s[0].toUpperCase() + s.slice(1)}</button>
-              ))}
-            </div>
-          </label>
-          <label style={{ fontSize: 13, color: PAL.muted }}>Duration (minutes)
-            <input type="number" style={{ ...inp, display: "block", marginTop: 4 }} value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 15" />
-          </label>
-        </>) : (<>
-          <div style={{ display: "flex", gap: 8 }}>
-            <label style={{ flex: 1, fontSize: 13, color: PAL.muted }}>Offered
-              <input type="number" style={{ ...inp, display: "block", marginTop: 4 }} value={offered} onChange={e => setOffered(e.target.value)} placeholder="e.g. 4" />
-            </label>
-            <label style={{ flex: 1, fontSize: 13, color: PAL.muted }}>Consumed
-              <input type="number" style={{ ...inp, display: "block", marginTop: 4 }} value={consumed} onChange={e => setConsumed(e.target.value)} placeholder="e.g. 3.5" />
-            </label>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {["oz", "ml"].map(u => (
-              <button key={u} onClick={() => setUnit(u)} style={{
-                flex: 1, padding: "9px 0", borderRadius: 9, border: "none",
-                background: unit === u ? PAL.primary : PAL.soft, color: unit === u ? "#fff" : PAL.muted,
-                fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "inherit",
-              }}>{u}</button>
-            ))}
-          </div>
-        </>)}
-        <button onClick={save} style={{ padding: "13px", borderRadius: 11, border: "none", background: PAL.feed, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
-          Save Feed
-        </button>
-      </div>
-    </Overlay>
-  );
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 18px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, "Log Feed"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 16 } }, ["formula", "breast"].map((t) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setType(t), style: {
+    flex: 1,
+    padding: "9px 0",
+    borderRadius: 9,
+    border: "none",
+    background: type === t ? PAL.feed : PAL.soft,
+    color: type === t ? "#fff" : PAL.muted,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 14,
+    fontFamily: "inherit"
+  } }, t === "formula" ? "\u{1F37C} Formula" : "\u{1F931} Breast"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Time", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: time, onChange: (e) => setTime(e.target.value) })), isBreast ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Side", /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, ["left", "right", "both"].map((s) => /* @__PURE__ */ React.createElement("button", { key: s, onClick: () => setSide(s), style: {
+    flex: 1,
+    padding: "8px 0",
+    borderRadius: 8,
+    border: "none",
+    background: side === s ? PAL.feed : PAL.soft,
+    color: side === s ? "#fff" : PAL.muted,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 13,
+    fontFamily: "inherit"
+  } }, s[0].toUpperCase() + s.slice(1))))), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Duration (minutes)", /* @__PURE__ */ React.createElement("input", { type: "number", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: duration, onChange: (e) => setDuration(e.target.value), placeholder: "e.g. 15" }))) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("label", { style: { flex: 1, fontSize: 13, color: PAL.muted } }, "Offered", /* @__PURE__ */ React.createElement("input", { type: "number", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: offered, onChange: (e) => setOffered(e.target.value), placeholder: "e.g. 4" })), /* @__PURE__ */ React.createElement("label", { style: { flex: 1, fontSize: 13, color: PAL.muted } }, "Consumed", /* @__PURE__ */ React.createElement("input", { type: "number", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: consumed, onChange: (e) => setConsumed(e.target.value), placeholder: "e.g. 3.5" }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, ["oz", "ml"].map((u) => /* @__PURE__ */ React.createElement("button", { key: u, onClick: () => setUnit(u), style: {
+    flex: 1,
+    padding: "9px 0",
+    borderRadius: 9,
+    border: "none",
+    background: unit === u ? PAL.primary : PAL.soft,
+    color: unit === u ? "#fff" : PAL.muted,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 14,
+    fontFamily: "inherit"
+  } }, u)))), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.feed, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, "Save Feed")));
 }
-
-// ─── Sleep Log Modal ──────────────────────────────────────────────────────────
 function SleepModal({ onSave, onClose, initial, isNight }) {
-  const [start, setStart] = useState(initial?.start ? toTimeInput(new Date(initial.start)) : toTimeInput(new Date()));
-  const [end, setEnd] = useState(initial?.end ? toTimeInput(new Date(initial.end)) : "");
-
+  const [start, setStart] = useState((initial == null ? void 0 : initial.start) ? toTimeInput(new Date(initial.start)) : toTimeInput(/* @__PURE__ */ new Date()));
+  const [end, setEnd] = useState((initial == null ? void 0 : initial.end) ? toTimeInput(new Date(initial.end)) : "");
   const save = () => {
+    var _a;
     const s = strToDate(start);
     let e = end ? strToDate(end) : null;
     if (e && e < s) e.setDate(e.getDate() + 1);
-    onSave({ id: initial?.id || Date.now(), start: s, end: e, isNight: !!isNight, linkedToId: initial?.linkedToId ?? null });
+    onSave({ id: (initial == null ? void 0 : initial.id) || Date.now(), start: s, end: e, isNight: !!isNight, linkedToId: (_a = initial == null ? void 0 : initial.linkedToId) != null ? _a : null });
     onClose();
   };
-
   const inp = {
-    width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-
-  return (
-    <Overlay onClose={onClose}>
-      <h3 style={{ margin: "0 0 18px", fontFamily: "'Playfair Display',Georgia,serif", color: PAL.text }}>
-        {isNight ? "🌙 Night Sleep" : "💤 Nap"}
-      </h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <label style={{ fontSize: 13, color: PAL.muted }}>Sleep start
-          <input type="time" style={{ ...inp, display: "block", marginTop: 4 }} value={start} onChange={e => setStart(e.target.value)} />
-        </label>
-        <label style={{ fontSize: 13, color: PAL.muted }}>Wake up (leave blank if still sleeping)
-          <input type="time" style={{ ...inp, display: "block", marginTop: 4 }} value={end} onChange={e => setEnd(e.target.value)} />
-        </label>
-        <button onClick={save} style={{ padding: "13px", borderRadius: 11, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
-          Save Sleep
-        </button>
-      </div>
-    </Overlay>
-  );
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 18px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, isNight ? "\u{1F319} Night Sleep" : "\u{1F4A4} Nap"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Sleep start", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: start, onChange: (e) => setStart(e.target.value) })), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Wake up (leave blank if still sleeping)", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: end, onChange: (e) => setEnd(e.target.value) })), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, "Save Sleep")));
 }
-
-// ─── Edit Event Modal ─────────────────────────────────────────────────────────
 function EditEventModal({ event, scheduleSettings, allEvents, onSave, onClose }) {
   const [startTime, setStartTime] = useState(toTimeInput(new Date(event.start)));
   const [endTime, setEndTime] = useState(event.end ? toTimeInput(new Date(event.end)) : "");
-
   const inp = {
-    width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-
   const save = () => {
     const newStart = strToDate(startTime, new Date(event.start));
     let newEnd = endTime ? strToDate(endTime, new Date(event.start)) : null;
     if (newEnd && newEnd < newStart) newEnd.setDate(newEnd.getDate() + 1);
-
-    let updated = allEvents.map(ev => ({ ...ev }));
-    const idx = updated.findIndex(e => e.id === event.id);
-    if (idx === -1) { onSave(updated); onClose(); return; }
-
+    let updated = allEvents.map((ev) => __spreadValues({}, ev));
+    const idx = updated.findIndex((e) => e.id === event.id);
+    if (idx === -1) {
+      onSave(updated);
+      onClose();
+      return;
+    }
     if (event.type === "nap") {
       const oldStart = new Date(event.start);
       const oldEnd = new Date(event.end);
       const oldDurMins = diffMins(oldStart, oldEnd);
       const maxDurMins = event.originalDurationMins || oldDurMins;
-
-      // Resolve new end: cap duration at original — cannot extend a nap
       let resolvedDurMins = oldDurMins;
       if (newEnd) {
         const requestedDur = diffMins(newStart, newEnd);
-        resolvedDurMins = Math.min(requestedDur, maxDurMins); // never extend
+        resolvedDurMins = Math.min(requestedDur, maxDurMins);
       }
       const resolvedEnd = addMins(newStart, resolvedDurMins);
-
-      // Apply change to this nap
-      updated[idx] = { ...updated[idx], start: newStart, end: resolvedEnd };
-
-      // Rebuild everything after this nap using fixed wake windows
+      updated[idx] = __spreadProps(__spreadValues({}, updated[idx]), { start: newStart, end: resolvedEnd });
       const result = rebuildFromIndex(updated, idx, scheduleSettings);
       onSave(result);
       onClose();
       return;
-    } else if (event.id === 'wake-0') {
-      // Wake-up time changed — regenerate the whole schedule from new wake time
+    } else if (event.id === "wake-0") {
       const newWakeTime = toTimeInput(newStart);
-      const newSettings = { ...scheduleSettings, wakeTime: newWakeTime };
+      const newSettings = __spreadProps(__spreadValues({}, scheduleSettings), { wakeTime: newWakeTime });
       onSave(generateSchedule(newSettings));
       onClose();
       return;
     } else {
-      // Bedtime or other: just update this event
-      updated[idx] = { ...updated[idx], start: newStart, end: newEnd || updated[idx].end };
+      updated[idx] = __spreadProps(__spreadValues({}, updated[idx]), { start: newStart, end: newEnd || updated[idx].end });
     }
-
     onSave(updated);
     onClose();
   };
-
   const hasEnd = event.type === "nap";
-
-  return (
-    <Overlay onClose={onClose}>
-      <h3 style={{ margin: "0 0 4px", fontFamily: "'Playfair Display',Georgia,serif", color: PAL.text }}>Edit Event</h3>
-      <p style={{ margin: "0 0 18px", color: PAL.muted, fontSize: 14 }}>{event.label}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <label style={{ fontSize: 13, color: PAL.muted }}>Start time
-          <input type="time" style={{ ...inp, display: "block", marginTop: 4 }} value={startTime} onChange={e => setStartTime(e.target.value)} />
-        </label>
-        {hasEnd && (
-          <label style={{ fontSize: 13, color: PAL.muted }}>End time
-            <input type="time" style={{ ...inp, display: "block", marginTop: 4 }} value={endTime} onChange={e => setEndTime(e.target.value)} />
-          </label>
-        )}
-        <button onClick={save} style={{ padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
-          Update Event
-        </button>
-      </div>
-    </Overlay>
-  );
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 4px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, "Edit Event"), /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 18px", color: PAL.muted, fontSize: 14 } }, event.label), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Start time", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: startTime, onChange: (e) => setStartTime(e.target.value) })), hasEnd && /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "End time", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: endTime, onChange: (e) => setEndTime(e.target.value) })), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, "Update Event")));
 }
-
-// ─── Schedule Settings Modal ──────────────────────────────────────────────────
 function ScheduleSettingsModal({ settings, onSave, onClose }) {
-  const [s, setS] = useState({ ...settings });
-  // Track raw string values for number fields so the input stays blank while editing
+  const [s, setS] = useState(__spreadValues({}, settings));
   const [raw, setRaw] = useState({});
-
   const inp = {
-    width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-
   const fields = [
     { key: "wakeTime", label: "Morning wake time", type: "time" },
     { key: "bedTime", label: "Bedtime", type: "time" },
@@ -711,293 +522,167 @@ function ScheduleSettingsModal({ settings, onSave, onClose }) {
     { key: "wakeWindowMins", label: "Wake window (minutes)", type: "number" },
     { key: "napDurationMins", label: "Average nap duration (minutes)", type: "number" },
     { key: "bedtimeToleranceMins", label: "Wake window tolerance before bridging nap triggers (minutes)", type: "number" },
-    { key: "bridgingNapMins", label: "Bridging nap length (minutes)", type: "number" },
+    { key: "bridgingNapMins", label: "Bridging nap length (minutes)", type: "number" }
   ];
-
   const handleChange = (key, type, value) => {
     if (type === "number") {
-      // Always store the raw string while editing so blank stays blank
-      setRaw(p => ({ ...p, [key]: value }));
-      // Only commit a numeric value when there's actually a number present
+      setRaw((p) => __spreadProps(__spreadValues({}, p), { [key]: value }));
       if (value !== "" && value !== "-") {
-        setS(p => ({ ...p, [key]: Number(value) }));
+        setS((p) => __spreadProps(__spreadValues({}, p), { [key]: Number(value) }));
       }
     } else {
-      setS(p => ({ ...p, [key]: value }));
+      setS((p) => __spreadProps(__spreadValues({}, p), { [key]: value }));
     }
   };
-
   const handleBlur = (key, type) => {
     if (type === "number") {
-      // On blur, clear the raw override — input will fall back to the numeric state (showing 0 if empty)
-      setRaw(p => {
-        const next = { ...p };
+      setRaw((p) => {
+        const next = __spreadValues({}, p);
         delete next[key];
         return next;
       });
-      // If the field was left blank, commit 0
       if (raw[key] === "" || raw[key] === "-") {
-        setS(p => ({ ...p, [key]: 0 }));
+        setS((p) => __spreadProps(__spreadValues({}, p), { [key]: 0 }));
       }
     }
   };
-
   const getDisplayValue = (key, type) => {
     if (type === "number" && key in raw) return raw[key];
     return s[key];
   };
-
-  return (
-    <Overlay onClose={onClose}>
-      <h3 style={{ margin: "0 0 18px", fontFamily: "'Playfair Display',Georgia,serif", color: PAL.text }}>Schedule Settings</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {fields.map(f => (
-          <label key={f.key} style={{ fontSize: 13, color: PAL.muted }}>{f.label}
-            <input
-              type={f.type}
-              style={{ ...inp, display: "block", marginTop: 4 }}
-              value={getDisplayValue(f.key, f.type)}
-              onChange={e => handleChange(f.key, f.type, e.target.value)}
-              onBlur={() => handleBlur(f.key, f.type)}
-            />
-          </label>
-        ))}
-        <button onClick={() => { onSave(s); onClose(); }} style={{ padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }}>
-          Generate Schedule
-        </button>
-      </div>
-    </Overlay>
-  );
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 18px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, "Schedule Settings"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, fields.map((f) => /* @__PURE__ */ React.createElement("label", { key: f.key, style: { fontSize: 13, color: PAL.muted } }, f.label, /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: f.type,
+      style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }),
+      value: getDisplayValue(f.key, f.type),
+      onChange: (e) => handleChange(f.key, f.type, e.target.value),
+      onBlur: () => handleBlur(f.key, f.type)
+    }
+  ))), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    onSave(s);
+    onClose();
+  }, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, "Generate Schedule")));
 }
-
-// ─── Invite Modal ─────────────────────────────────────────────────────────────
 function InviteModal({ onClose }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const inp = {
-    width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-  return (
-    <Overlay onClose={onClose}>
-      <h3 style={{ margin: "0 0 6px", fontFamily: "'Playfair Display',Georgia,serif", color: PAL.text }}>Invite a Partner</h3>
-      <p style={{ margin: "0 0 18px", color: PAL.muted, fontSize: 14 }}>Share access to this account</p>
-      {sent ? (
-        <div style={{ textAlign: "center", padding: "20px 0" }}>
-          <div style={{ fontSize: 40 }}>✉️</div>
-          <p style={{ color: PAL.primary, fontWeight: 700, marginTop: 10 }}>Invite sent to {email}!</p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <label style={{ fontSize: 13, color: PAL.muted }}>Email address
-            <input type="email" style={{ ...inp, display: "block", marginTop: 4 }} value={email} onChange={e => setEmail(e.target.value)} placeholder="partner@email.com" />
-          </label>
-          <button onClick={() => setSent(true)} style={{ padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>
-            Send Invite
-          </button>
-        </div>
-      )}
-    </Overlay>
-  );
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 6px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, "Invite a Partner"), /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 18px", color: PAL.muted, fontSize: 14 } }, "Share access to this account"), sent ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "20px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40 } }, "\u2709\uFE0F"), /* @__PURE__ */ React.createElement("p", { style: { color: PAL.primary, fontWeight: 700, marginTop: 10 } }, "Invite sent to ", email, "!")) : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Email address", /* @__PURE__ */ React.createElement("input", { type: "email", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: email, onChange: (e) => setEmail(e.target.value), placeholder: "partner@email.com" })), /* @__PURE__ */ React.createElement("button", { onClick: () => setSent(true), style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" } }, "Send Invite")));
 }
-
-// ─── Overlay Wrapper ──────────────────────────────────────────────────────────
 function Overlay({ children, onClose }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, padding: "0 0 0 0" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: PAL.card, borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ width: 36, height: 4, background: PAL.border, borderRadius: 2, margin: "0 auto 20px" }} />
-        {children}
-      </div>
-    </div>
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 100, padding: "0 0 0 0" },
+      onClick: (e) => {
+        if (e.target === e.currentTarget) onClose();
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 36, height: 4, background: PAL.border, borderRadius: 2, margin: "0 auto 20px" } }), children)
   );
 }
-
-// ─── Schedule Tab ─────────────────────────────────────────────────────────────
-// ─── Nap Timer Card ───────────────────────────────────────────────────────────
-// ─── Nap Log Modal ────────────────────────────────────────────────────────────
 function NapLogModal({ todaySleeps, schedule, scheduleSettings, activeSleep, onStartTimer, onSaveNap, onClose }) {
-  const [mode, setMode] = useState('choose'); // choose | manual
-  const [startTime, setStartTime] = useState(toTimeInput(new Date()));
-  const [endTime, setEndTime] = useState('');
+  const [mode, setMode] = useState("choose");
+  const [startTime, setStartTime] = useState(toTimeInput(/* @__PURE__ */ new Date()));
+  const [endTime, setEndTime] = useState("");
   const [linked, setLinked] = useState(false);
-
-  const lastNap = todaySleeps.filter(s => !s.isNight).slice(-1)[0] || null;
-
+  const lastNap = todaySleeps.filter((s) => !s.isNight).slice(-1)[0] || null;
   const inp = {
-    width: '100%', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${PAL.border}`,
-    fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: 'inherit',
-    outline: 'none', boxSizing: 'border-box',
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1.5px solid ${PAL.border}`,
+    fontSize: 15,
+    background: PAL.soft,
+    color: PAL.text,
+    fontFamily: "inherit",
+    outline: "none",
+    boxSizing: "border-box"
   };
-
   const handleSaveManual = () => {
-    const base = new Date();
+    const base = /* @__PURE__ */ new Date();
     const s = strToDate(startTime, base);
     let e = endTime ? strToDate(endTime, base) : null;
     if (e && e < s) e.setDate(e.getDate() + 1);
     onSaveNap(s, e, linked && lastNap ? lastNap.id : null);
   };
-
-  return (
-    <Overlay onClose={onClose}>
-      <h3 style={{ margin: '0 0 4px', fontFamily: "'Playfair Display',Georgia,serif", color: PAL.text }}>Log a Nap</h3>
-      <p style={{ margin: '0 0 20px', color: PAL.muted, fontSize: 14 }}>How would you like to log it?</p>
-
-      {mode === 'choose' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Option 1: live timer */}
-          <button onClick={onStartTimer} style={{ width: '100%', padding: '16px', borderRadius: 14, border: `1.5px solid ${PAL.sleep}`, background: PAL.sleepLight, color: PAL.text, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: PAL.sleep, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⏱</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: PAL.text }}>Start nap timer</div>
-              <div style={{ fontSize: 13, color: PAL.muted, marginTop: 2 }}>Tap now and end when baby wakes</div>
-            </div>
-          </button>
-
-          {/* Option 2: enter times */}
-          <button onClick={() => setMode('manual')} style={{ width: '100%', padding: '16px', borderRadius: 14, border: `1.5px solid ${PAL.border}`, background: PAL.soft, color: PAL.text, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: PAL.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🕐</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: PAL.text }}>Enter start & end time</div>
-              <div style={{ fontSize: 13, color: PAL.muted, marginTop: 2 }}>Log a nap that already happened</div>
-            </div>
-          </button>
-
-          {/* Link to previous nap checkbox */}
-          {lastNap && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, cursor: 'pointer', userSelect: 'none', padding: '10px 14px', borderRadius: 12, background: linked ? PAL.sleepLight : PAL.soft, border: `1.5px solid ${linked ? PAL.sleep : PAL.border}`, transition: 'all 0.15s' }}>
-              <div onClick={() => setLinked(l => !l)} style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${linked ? PAL.sleep : PAL.border}`, background: linked ? PAL.sleep : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', flexShrink: 0 }}>
-                {linked && <span style={{ color: '#fff', fontSize: 14, lineHeight: 1 }}>✓</span>}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: PAL.text }}>Link to previous nap</div>
-                <div style={{ fontSize: 12, color: PAL.muted }}>This is a split nap — baby briefly woke up</div>
-              </div>
-            </label>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <label style={{ fontSize: 13, color: PAL.muted }}>Nap start
-            <input type="time" style={{ ...inp, display: 'block', marginTop: 4 }} value={startTime} onChange={e => setStartTime(e.target.value)} />
-          </label>
-          <label style={{ fontSize: 13, color: PAL.muted }}>Nap end
-            <input type="time" style={{ ...inp, display: 'block', marginTop: 4 }} value={endTime} onChange={e => setEndTime(e.target.value)} />
-          </label>
-
-          {lastNap && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none', padding: '10px 14px', borderRadius: 12, background: linked ? PAL.sleepLight : PAL.soft, border: `1.5px solid ${linked ? PAL.sleep : PAL.border}`, transition: 'all 0.15s' }}>
-              <div onClick={() => setLinked(l => !l)} style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${linked ? PAL.sleep : PAL.border}`, background: linked ? PAL.sleep : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', flexShrink: 0 }}>
-                {linked && <span style={{ color: '#fff', fontSize: 14, lineHeight: 1 }}>✓</span>}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: PAL.text }}>Link to previous nap</div>
-                <div style={{ fontSize: 12, color: PAL.muted }}>This is a split nap — baby briefly woke up</div>
-              </div>
-            </label>
-          )}
-
-          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button onClick={() => setMode('choose')} style={{ flex: 1, padding: '12px', borderRadius: 11, border: `1.5px solid ${PAL.border}`, background: 'transparent', color: PAL.muted, fontWeight: 600, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' }}>← Back</button>
-            <button onClick={handleSaveManual} disabled={!startTime} style={{ flex: 2, padding: '12px', borderRadius: 11, border: 'none', background: PAL.sleep, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit', opacity: startTime ? 1 : 0.5 }}>Save Nap</button>
-          </div>
-        </div>
-      )}
-    </Overlay>
-  );
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 4px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, "Log a Nap"), /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 20px", color: PAL.muted, fontSize: 14 } }, "How would you like to log it?"), mode === "choose" ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: onStartTimer, style: { width: "100%", padding: "16px", borderRadius: 14, border: `1.5px solid ${PAL.sleep}`, background: PAL.sleepLight, color: PAL.text, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 40, height: 40, borderRadius: 12, background: PAL.sleep, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 } }, "\u23F1"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: 15, color: PAL.text } }, "Start nap timer"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, marginTop: 2 } }, "Tap now and end when baby wakes"))), /* @__PURE__ */ React.createElement("button", { onClick: () => setMode("manual"), style: { width: "100%", padding: "16px", borderRadius: 14, border: `1.5px solid ${PAL.border}`, background: PAL.soft, color: PAL.text, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 40, height: 40, borderRadius: 12, background: PAL.border, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 } }, "\u{1F550}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: 15, color: PAL.text } }, "Enter start & end time"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, marginTop: 2 } }, "Log a nap that already happened"))), lastNap && /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 10, marginTop: 4, cursor: "pointer", userSelect: "none", padding: "10px 14px", borderRadius: 12, background: linked ? PAL.sleepLight : PAL.soft, border: `1.5px solid ${linked ? PAL.sleep : PAL.border}`, transition: "all 0.15s" } }, /* @__PURE__ */ React.createElement("div", { onClick: () => setLinked((l) => !l), style: { width: 22, height: 22, borderRadius: 7, border: `2px solid ${linked ? PAL.sleep : PAL.border}`, background: linked ? PAL.sleep : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", flexShrink: 0 } }, linked && /* @__PURE__ */ React.createElement("span", { style: { color: "#fff", fontSize: 14, lineHeight: 1 } }, "\u2713")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: PAL.text } }, "Link to previous nap"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted } }, "This is a split nap \u2014 baby briefly woke up")))) : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Nap start", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: startTime, onChange: (e) => setStartTime(e.target.value) })), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Nap end", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: endTime, onChange: (e) => setEndTime(e.target.value) })), lastNap && /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none", padding: "10px 14px", borderRadius: 12, background: linked ? PAL.sleepLight : PAL.soft, border: `1.5px solid ${linked ? PAL.sleep : PAL.border}`, transition: "all 0.15s" } }, /* @__PURE__ */ React.createElement("div", { onClick: () => setLinked((l) => !l), style: { width: 22, height: 22, borderRadius: 7, border: `2px solid ${linked ? PAL.sleep : PAL.border}`, background: linked ? PAL.sleep : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", flexShrink: 0 } }, linked && /* @__PURE__ */ React.createElement("span", { style: { color: "#fff", fontSize: 14, lineHeight: 1 } }, "\u2713")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: PAL.text } }, "Link to previous nap"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted } }, "This is a split nap \u2014 baby briefly woke up"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 4 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setMode("choose"), style: { flex: 1, padding: "12px", borderRadius: 11, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "inherit" } }, "\u2190 Back"), /* @__PURE__ */ React.createElement("button", { onClick: handleSaveManual, disabled: !startTime, style: { flex: 2, padding: "12px", borderRadius: 11, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit", opacity: startTime ? 1 : 0.5 } }, "Save Nap"))));
 }
-
 function NapTimerCard({ activeSleep, lastNapId, onEnd }) {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState(/* @__PURE__ */ new Date());
   const [linked, setLinked] = useState(!!activeSleep.linkedToId);
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
+    const t = setInterval(() => setNow(/* @__PURE__ */ new Date()), 1e3);
     return () => clearInterval(t);
   }, []);
-  const totalSecs = Math.floor((now - activeSleep.start) / 1000);
+  const totalSecs = Math.floor((now - activeSleep.start) / 1e3);
   const h = Math.floor(totalSecs / 3600);
-  const m = Math.floor((totalSecs % 3600) / 60);
+  const m = Math.floor(totalSecs % 3600 / 60);
   const s = totalSecs % 60;
-  const label = h > 0
-    ? `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`
-    : `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
-  return (
-    <div style={{ background: PAL.sleepLight, border: `1.5px solid ${PAL.sleep}`, borderRadius: 16, padding: '16px 18px', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontWeight: 700, color: PAL.text, fontSize: 15 }}>💤 Nap in progress</div>
-          <div style={{ color: PAL.muted, fontSize: 13, marginTop: 2 }}>Started {fmt12(activeSleep.start)}</div>
-          <div style={{ color: PAL.sleep, fontSize: 20, fontWeight: 800, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{label}</div>
-        </div>
-        <button onClick={() => onEnd(activeSleep.start, new Date(), linked ? lastNapId : null)} style={{ background: PAL.sleep, border: 'none', borderRadius: 10, padding: '9px 14px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
-          End Nap
-        </button>
-      </div>
-      {lastNapId && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, cursor: 'pointer', userSelect: 'none' }}>
-          <div onClick={() => setLinked(l => !l)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${linked ? PAL.sleep : PAL.border}`, background: linked ? PAL.sleep : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', flexShrink: 0 }}>
-            {linked && <span style={{ color: '#fff', fontSize: 13, lineHeight: 1 }}>✓</span>}
-          </div>
-          <span style={{ fontSize: 13, color: PAL.muted }}>Link to previous nap <span style={{ color: PAL.sleep, fontWeight: 600 }}>(split nap)</span></span>
-        </label>
-      )}
-    </div>
-  );
+  const label = h > 0 ? `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s` : `${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+  return /* @__PURE__ */ React.createElement("div", { style: { background: PAL.sleepLight, border: `1.5px solid ${PAL.sleep}`, borderRadius: 16, padding: "16px 18px", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, color: PAL.text, fontSize: 15 } }, "\u{1F4A4} Nap in progress"), /* @__PURE__ */ React.createElement("div", { style: { color: PAL.muted, fontSize: 13, marginTop: 2 } }, "Started ", fmt12(activeSleep.start)), /* @__PURE__ */ React.createElement("div", { style: { color: PAL.sleep, fontSize: 20, fontWeight: 800, marginTop: 4, fontVariantNumeric: "tabular-nums" } }, label)), /* @__PURE__ */ React.createElement("button", { onClick: () => onEnd(activeSleep.start, /* @__PURE__ */ new Date(), linked ? lastNapId : null), style: { background: PAL.sleep, border: "none", borderRadius: 10, padding: "9px 14px", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "End Nap")), lastNapId && /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer", userSelect: "none" } }, /* @__PURE__ */ React.createElement("div", { onClick: () => setLinked((l) => !l), style: { width: 20, height: 20, borderRadius: 6, border: `2px solid ${linked ? PAL.sleep : PAL.border}`, background: linked ? PAL.sleep : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", flexShrink: 0 } }, linked && /* @__PURE__ */ React.createElement("span", { style: { color: "#fff", fontSize: 13, lineHeight: 1 } }, "\u2713")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, "Link to previous nap ", /* @__PURE__ */ React.createElement("span", { style: { color: PAL.sleep, fontWeight: 600 } }, "(split nap)"))));
 }
-
-// ─── AI Log Modal ─────────────────────────────────────────────────────────────
 function AILogModal({ schedule, scheduleSettings, onSaveFeed, onSaveSleep, onUpdateSchedule, onClose }) {
-  const [messages, setMessages] = useState([]); // {role:'user'|'assistant', text, actions?}
-  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = React.useRef(null);
-
   const EXAMPLES = [
-    'How can I make bedtime earlier?',
-    'Baby had 120ml formula at 2pm',
-    'Nap from 1:15pm to 2:40pm',
-    'Why is there a bridging nap?',
-    'Skip the bridging nap',
+    "How can I make bedtime earlier?",
+    "Baby had 120ml formula at 2pm",
+    "Nap from 1:15pm to 2:40pm",
+    "Why is there a bridging nap?",
+    "Skip the bridging nap"
   ];
-
   React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    var _a;
+    (_a = bottomRef.current) == null ? void 0 : _a.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
-
   const scheduleContext = () => {
-    const now = new Date();
-    const allEvents = schedule.filter(e => e.type !== undefined);
-    // Split into past and upcoming for the AI prompt
-    const upcoming = allEvents.filter(e => {
+    const now = /* @__PURE__ */ new Date();
+    const allEvents = schedule.filter((e) => e.type !== void 0);
+    const upcoming = allEvents.filter((e) => {
       const evEnd = e.end ? new Date(e.end) : new Date(e.start);
       return evEnd >= now;
     });
-    const past = allEvents.filter(e => {
+    const past = allEvents.filter((e) => {
       const evEnd = e.end ? new Date(e.end) : new Date(e.start);
       return evEnd < now;
     });
-    const fmtEv = e => {
-      const start = e.start ? fmt12(new Date(e.start)) : '';
-      const end = e.end ? ` – ${fmt12(new Date(e.end))}` : '';
+    const fmtEv = (e) => {
+      const start = e.start ? fmt12(new Date(e.start)) : "";
+      const end = e.end ? ` \u2013 ${fmt12(new Date(e.end))}` : "";
       return `${e.label}: ${start}${end}`;
     };
-    const pastLines = past.length ? `PAST (cannot change):\n${past.map(fmtEv).join('\n')}` : '';
-    const upcomingLines = upcoming.length ? `UPCOMING (can still change):\n${upcoming.map(fmtEv).join('\n')}` : '';
-    return [pastLines, upcomingLines].filter(Boolean).join('\n\n');
+    const pastLines = past.length ? `PAST (cannot change):
+${past.map(fmtEv).join("\n")}` : "";
+    const upcomingLines = upcoming.length ? `UPCOMING (can still change):
+${upcoming.map(fmtEv).join("\n")}` : "";
+    return [pastLines, upcomingLines].filter(Boolean).join("\n\n");
   };
-
   const systemPrompt = () => {
-    const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const now = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
     const settings = `Wake: ${scheduleSettings.wakeTime}, Bed: ${scheduleSettings.bedTime}, Wake window: ${scheduleSettings.wakeWindowMins}min, Nap duration: ${scheduleSettings.napDurationMins}min, Bridging nap: ${scheduleSettings.bridgingNapMins}min`;
-    return `You are LullaByte, a friendly baby schedule assistant. Current time: ${now}.
+    return `You are Milk & Moon, a friendly baby schedule assistant. Current time: ${now}.
 
 Current schedule settings: ${settings}
 
 Current schedule:
 ${scheduleContext()}
 
-IMPORTANT: Only suggest changes to UPCOMING events. Past events cannot be changed — never suggest adjusting wake up time, past naps, or anything that has already happened.
+IMPORTANT: Only suggest changes to UPCOMING events. Past events cannot be changed \u2014 never suggest adjusting wake up time, past naps, or anything that has already happened.
 
 You can help with two types of requests:
 1. LOGGING: if the user describes a feed or nap, respond with JSON action
@@ -1009,203 +694,144 @@ or {"action":"log","type":"sleep","start":"HH:MM","end":"HH:MM"|null}
 
 For SCHEDULE QUESTIONS respond conversationally in plain text. At the end include a JSON block with available actions like:
 ACTIONS:${JSON.stringify([
-  {"id":"skip_bridge","label":"Skip bridging nap","description":"Remove the bridging nap and shift bedtime earlier"},
-  {"id":"earlier_wake","label":"Wake baby earlier","description":"Adjust wake up time to shift the whole schedule"},
-])}
+      { "id": "skip_bridge", "label": "Skip bridging nap", "description": "Remove the bridging nap and shift bedtime earlier" },
+      { "id": "earlier_wake", "label": "Wake baby earlier", "description": "Adjust wake up time to shift the whole schedule" }
+    ])}
 
 For GENERAL QUESTIONS just respond conversationally with no JSON.
 Keep responses concise and friendly. Never use markdown headers or bullet asterisks.`;
   };
-
   const applyAction = (actionId) => {
-    const bedEvent = schedule.find(e => e.id === 'bed');
-    const bridgeNap = schedule.find(e => e.isBridging);
-    
-    if (actionId === 'skip_bridge' && bridgeNap) {
-      // Remove bridge nap and rebuild — find its index
-      const idx = schedule.findIndex(e => e.isBridging);
+    var _a, _b;
+    const bedEvent = schedule.find((e) => e.id === "bed");
+    const bridgeNap = schedule.find((e) => e.isBridging);
+    if (actionId === "skip_bridge" && bridgeNap) {
+      const idx = schedule.findIndex((e) => e.isBridging);
       if (idx >= 0) {
-        // Remove bridge nap and its preceding wake window, rebuild from previous nap
-        const prevNapIdx = schedule.slice(0, idx).map((e,i)=>({e,i})).filter(({e})=>e.type==='nap').slice(-1)[0]?.i ?? 0;
-        const withoutBridge = schedule.filter((e, i) => !e.isBridging && !(e.type==='wake' && i > prevNapIdx && i < idx));
+        const prevNapIdx = (_b = (_a = schedule.slice(0, idx).map((e, i) => ({ e, i })).filter(({ e }) => e.type === "nap").slice(-1)[0]) == null ? void 0 : _a.i) != null ? _b : 0;
+        const withoutBridge = schedule.filter((e, i) => !e.isBridging && !(e.type === "wake" && i > prevNapIdx && i < idx));
         onUpdateSchedule(rebuildFromIndex(withoutBridge, prevNapIdx, scheduleSettings));
-        setMessages(m => [...m, { role: 'assistant', text: '✅ Done — bridging nap removed and schedule updated.' }]);
+        setMessages((m) => [...m, { role: "assistant", text: "\u2705 Done \u2014 bridging nap removed and schedule updated." }]);
       }
     }
   };
-
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
-    setInput('');
-    setMessages(m => [...m, { role: 'user', text: userMsg }]);
+    setInput("");
+    setMessages((m) => [...m, { role: "user", text: userMsg }]);
     setLoading(true);
-
     try {
-      const history = messages.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.text }));
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1e3,
           system: systemPrompt(),
-          messages: [...history, { role: 'user', content: userMsg }],
-        }),
+          messages: [...history, { role: "user", content: userMsg }]
+        })
       });
       const data = await res.json();
-      const raw = (data.content || []).map(c => c.text || '').join('').trim();
-
-      // Try to parse as pure log action
+      const raw = (data.content || []).map((c) => c.text || "").join("").trim();
       try {
-        const clean = raw.replace(/```json|```/g, '').trim();
+        const clean = raw.replace(/```json|```/g, "").trim();
         const obj = JSON.parse(clean);
-        if (obj.action === 'log') {
-          setMessages(m => [...m, { role: 'assistant', text: raw, parsed: obj }]);
+        if (obj.action === "log") {
+          setMessages((m) => [...m, { role: "assistant", text: raw, parsed: obj }]);
           setLoading(false);
           return;
         }
-      } catch (_) {}
-
-      // Extract ACTIONS block if present
+      } catch (_) {
+      }
       const actionsMatch = raw.match(/ACTIONS:(\[[\s\S]*?\])/);
       let actions = null;
       let displayText = raw;
       if (actionsMatch) {
         try {
           actions = JSON.parse(actionsMatch[1]);
-          displayText = raw.replace(/ACTIONS:\[[\s\S]*?\]/, '').trim();
-        } catch (_) {}
+          displayText = raw.replace(/ACTIONS:\[[\s\S]*?\]/, "").trim();
+        } catch (_) {
+        }
       }
-
-      setMessages(m => [...m, { role: 'assistant', text: displayText, actions }]);
+      setMessages((m) => [...m, { role: "assistant", text: displayText, actions }]);
     } catch (e) {
-      setMessages(m => [...m, { role: 'assistant', text: 'Something went wrong. Please try again.' }]);
+      setMessages((m) => [...m, { role: "assistant", text: "Something went wrong. Please try again." }]);
     }
     setLoading(false);
   };
-
   const handleConfirmLog = (parsed) => {
-    if (parsed.type === 'feed') {
-      onSaveFeed({ id: Date.now(), type: parsed.feedType || 'formula', offered: parsed.offered ?? null, consumed: parsed.consumed ?? null, unit: parsed.unit || 'ml', side: parsed.side || null, duration: parsed.duration || null, time: parsed.time || toTimeInput(new Date()) });
-      setMessages(m => [...m.slice(0,-1), { ...m[m.length-1], confirmed: true }, { role: 'assistant', text: '✅ Feed logged!' }]);
-    } else if (parsed.type === 'sleep') {
-      const base = new Date();
+    var _a, _b;
+    if (parsed.type === "feed") {
+      onSaveFeed({ id: Date.now(), type: parsed.feedType || "formula", offered: (_a = parsed.offered) != null ? _a : null, consumed: (_b = parsed.consumed) != null ? _b : null, unit: parsed.unit || "ml", side: parsed.side || null, duration: parsed.duration || null, time: parsed.time || toTimeInput(/* @__PURE__ */ new Date()) });
+      setMessages((m) => [...m.slice(0, -1), __spreadProps(__spreadValues({}, m[m.length - 1]), { confirmed: true }), { role: "assistant", text: "\u2705 Feed logged!" }]);
+    } else if (parsed.type === "sleep") {
+      const base = /* @__PURE__ */ new Date();
       const startDate = strToDate(parsed.start, base);
       const endDate = parsed.end ? strToDate(parsed.end, base) : null;
       onSaveSleep({ id: Date.now(), start: startDate, end: endDate, isNight: false, linkedToId: null });
-      setMessages(m => [...m.slice(0,-1), { ...m[m.length-1], confirmed: true }, { role: 'assistant', text: '✅ Nap logged!' }]);
+      setMessages((m) => [...m.slice(0, -1), __spreadProps(__spreadValues({}, m[m.length - 1]), { confirmed: true }), { role: "assistant", text: "\u2705 Nap logged!" }]);
     }
   };
-
-  const inp = { width: '100%', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${PAL.border}`, fontSize: 14, background: PAL.soft, color: PAL.text, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', resize: 'none' };
-
-  return (
-    <Overlay onClose={onClose}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg, #7C9E8A, #A8C4D4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✨</div>
-        <h3 style={{ margin: 0, fontFamily: "'Playfair Display',Georgia,serif", color: PAL.text }}>Ask LullaByte</h3>
-      </div>
-      <p style={{ margin: '0 0 12px', color: PAL.muted, fontSize: 13 }}>Log a feed or nap, or ask about the schedule</p>
-
-      {/* Chat history */}
-      <div style={{ maxHeight: 320, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {messages.length === 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {EXAMPLES.map(ex => (
-              <button key={ex} onClick={() => setInput(ex)} style={{ fontSize: 11, padding: '5px 10px', borderRadius: 20, border: `1px solid ${PAL.border}`, background: PAL.soft, color: PAL.muted, cursor: 'pointer', fontFamily: 'inherit' }}>{ex}</button>
-            ))}
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i}>
-            <div style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div style={{ maxWidth: '85%', padding: '10px 13px', borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px', background: msg.role === 'user' ? 'linear-gradient(135deg, #7C9E8A, #A8C4D4)' : PAL.soft, color: msg.role === 'user' ? '#fff' : PAL.text, fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                {msg.text}
-              </div>
-            </div>
-            {/* Log confirm buttons */}
-            {msg.parsed && !msg.confirmed && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                <button onClick={() => handleConfirmLog(msg.parsed)} style={{ flex: 2, padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #7C9E8A, #A8C4D4)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>✓ Confirm & Save</button>
-                <button onClick={() => setMessages(m => m.filter((_,j) => j !== i))} style={{ flex: 1, padding: '9px', borderRadius: 10, border: `1.5px solid ${PAL.border}`, background: 'transparent', color: PAL.muted, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Discard</button>
-              </div>
-            )}
-            {/* Schedule action buttons */}
-            {msg.actions && !msg.actionsApplied && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
-                {msg.actions.map(action => (
-                  <button key={action.id} onClick={() => { applyAction(action.id); setMessages(m => m.map((mm,j) => j===i ? {...mm, actionsApplied:true} : mm)); }} style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${PAL.primary}`, background: PAL.soft, color: PAL.primary, fontWeight: 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', textAlign: 'left' }}>
-                    <span style={{ fontWeight: 700 }}>{action.label}</span>
-                    {action.description && <span style={{ color: PAL.muted, fontSize: 12, display: 'block', marginTop: 2 }}>{action.description}</span>}
-                  </button>
-                ))}
-                <button onClick={() => setMessages(m => m.map((mm,j) => j===i ? {...mm, actionsApplied:true} : mm))} style={{ width: '100%', padding: '8px', borderRadius: 10, border: `1.5px solid ${PAL.border}`, background: 'transparent', color: PAL.muted, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Leave as is</button>
-              </div>
-            )}
-          </div>
-        ))}
-        {loading && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{ padding: '10px 14px', borderRadius: '14px 14px 14px 4px', background: PAL.soft, display: 'flex', gap: 4, alignItems: 'center' }}>
-              {[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: PAL.muted, animation: `pulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <textarea rows={2} style={{ ...inp, flex: 1 }} placeholder="Ask anything or describe a feed/nap…" value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
-        <button onClick={handleSend} disabled={loading || !input.trim()} style={{ width: 44, borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #7C9E8A, #A8C4D4)', color: '#fff', fontSize: 18, cursor: 'pointer', opacity: (loading || !input.trim()) ? 0.5 : 1 }}>↑</button>
-      </div>
-    </Overlay>
-  );
+  const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${PAL.border}`, fontSize: 14, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", boxSizing: "border-box", resize: "none" };
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, #7C9E8A, #A8C4D4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 } }, "\u2728"), /* @__PURE__ */ React.createElement("h3", { style: { margin: 0, fontFamily: "'Figtree', sans-serif", color: PAL.text } }, "Ask Milk & Moon")), /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 12px", color: PAL.muted, fontSize: 13 } }, "Log a feed or nap, or ask about the schedule"), /* @__PURE__ */ React.createElement("div", { style: { maxHeight: 320, overflowY: "auto", marginBottom: 12, display: "flex", flexDirection: "column", gap: 8 } }, messages.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } }, EXAMPLES.map((ex) => /* @__PURE__ */ React.createElement("button", { key: ex, onClick: () => setInput(ex), style: { fontSize: 11, padding: "5px 10px", borderRadius: 20, border: `1px solid ${PAL.border}`, background: PAL.soft, color: PAL.muted, cursor: "pointer", fontFamily: "inherit" } }, ex))), messages.map((msg, i) => /* @__PURE__ */ React.createElement("div", { key: i }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: "85%", padding: "10px 13px", borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background: msg.role === "user" ? "linear-gradient(135deg, #7C9E8A, #A8C4D4)" : PAL.soft, color: msg.role === "user" ? "#fff" : PAL.text, fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap" } }, msg.text)), msg.parsed && !msg.confirmed && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 6 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => handleConfirmLog(msg.parsed), style: { flex: 2, padding: "9px", borderRadius: 10, border: "none", background: "linear-gradient(135deg, #7C9E8A, #A8C4D4)", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u2713 Confirm & Save"), /* @__PURE__ */ React.createElement("button", { onClick: () => setMessages((m) => m.filter((_, j) => j !== i)), style: { flex: 1, padding: "9px", borderRadius: 10, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "Discard")), msg.actions && !msg.actionsApplied && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 8 } }, msg.actions.map((action) => /* @__PURE__ */ React.createElement("button", { key: action.id, onClick: () => {
+    applyAction(action.id);
+    setMessages((m) => m.map((mm, j) => j === i ? __spreadProps(__spreadValues({}, mm), { actionsApplied: true }) : mm));
+  }, style: { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1.5px solid ${PAL.primary}`, background: PAL.soft, color: PAL.primary, fontWeight: 600, cursor: "pointer", fontSize: 13, fontFamily: "inherit", textAlign: "left" } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700 } }, action.label), action.description && /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontSize: 12, display: "block", marginTop: 2 } }, action.description))), /* @__PURE__ */ React.createElement("button", { onClick: () => setMessages((m) => m.map((mm, j) => j === i ? __spreadProps(__spreadValues({}, mm), { actionsApplied: true }) : mm)), style: { width: "100%", padding: "8px", borderRadius: 10, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, cursor: "pointer", fontSize: 12, fontFamily: "inherit" } }, "Leave as is")))), loading && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 14px", borderRadius: "14px 14px 14px 4px", background: PAL.soft, display: "flex", gap: 4, alignItems: "center" } }, [0, 1, 2].map((i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { width: 6, height: 6, borderRadius: "50%", background: PAL.muted, animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` } })))), /* @__PURE__ */ React.createElement("div", { ref: bottomRef })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(
+    "textarea",
+    {
+      rows: 2,
+      style: __spreadProps(__spreadValues({}, inp), { flex: 1 }),
+      placeholder: "Ask anything or describe a feed/nap\u2026",
+      value: input,
+      onChange: (e) => setInput(e.target.value),
+      onKeyDown: (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      }
+    }
+  ), /* @__PURE__ */ React.createElement("button", { onClick: handleSend, disabled: loading || !input.trim(), style: { width: 44, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #7C9E8A, #A8C4D4)", color: "#fff", fontSize: 18, cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 } }, "\u2191")));
 }
-
 function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep }) {
+  var _a;
   const [showSettings, setShowSettings] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [showNightSleep, setShowNightSleep] = useState(false);
   const [showAI, setShowAI] = useState(false);
-  const [now, setNow] = useState(new Date());
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
+  const [now, setNow] = useState(/* @__PURE__ */ new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(/* @__PURE__ */ new Date()), 3e4);
+    return () => clearInterval(t);
+  }, []);
   const [editFeed, setEditFeed] = useState(null);
   const [editSleep, setEditSleep] = useState(null);
-  const [activeSleep, setActiveSleep] = useState(null); // {start: Date}
+  const [activeSleep, setActiveSleep] = useState(null);
   const [showNapModal, setShowNapModal] = useState(false);
-
-  const todayFeeds = feeds.filter(f => {
+  const todayFeeds = feeds.filter((f) => {
     const d = strToDate(f.time);
-    const today = new Date();
+    const today = /* @__PURE__ */ new Date();
     return d.toDateString() === today.toDateString();
   });
-
-  const todaySleeps = sleeps.filter(s => {
+  const todaySleeps = sleeps.filter((s) => {
     const d = new Date(s.start);
-    const today = new Date();
+    const today = /* @__PURE__ */ new Date();
     return d.toDateString() === today.toDateString();
   });
-
-  // Merge schedule events with actual feeds and sleeps for timeline
-  const bottleFeeds = todayFeeds.filter(f => f.type === 'formula');
-
-  // Group linked naps into compound nap chains: { id, kind:'compoundNap', parts:[sleep,...], start, end }
-  const napSleeps = todaySleeps.filter(s => !s.isNight);
+  const bottleFeeds = todayFeeds.filter((f) => f.type === "formula");
+  const napSleeps = todaySleeps.filter((s) => !s.isNight);
   const compoundNapGroups = [];
-  const usedNapIds = new Set();
-  napSleeps.forEach(s => {
+  const usedNapIds = /* @__PURE__ */ new Set();
+  napSleeps.forEach((s) => {
     if (usedNapIds.has(s.id)) return;
-    // Build a chain: find all naps linked to this one (directly or transitively)
     const chain = [s];
     usedNapIds.add(s.id);
     let tail = s;
     while (true) {
-      const next = napSleeps.find(n => n.linkedToId === tail.id && !usedNapIds.has(n.id));
+      const next = napSleeps.find((n) => n.linkedToId === tail.id && !usedNapIds.has(n.id));
       if (!next) break;
       chain.push(next);
       usedNapIds.add(next.id);
@@ -1213,536 +839,330 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     }
     compoundNapGroups.push(chain);
   });
-
-  // Map each logged nap chain to the scheduled nap slot it replaced
-  // A chain replaces the closest unrecorded scheduled nap by start time
-  const scheduledNaps = schedule.filter(e => e.type === 'nap');
-  const replacedScheduledNapIds = new Set();
-  const napChainToSlot = new Map(); // chain[0].id → scheduled nap label/index
-
-  compoundNapGroups.forEach(chain => {
-    // Only non-linked chains (i.e. the root of a chain) replace a scheduled slot
-    if (chain[0].linkedToId) return; // sub-nap, not a root
+  const scheduledNaps = schedule.filter((e) => e.type === "nap");
+  const replacedScheduledNapIds = /* @__PURE__ */ new Set();
+  const napChainToSlot = /* @__PURE__ */ new Map();
+  compoundNapGroups.forEach((chain) => {
+    if (chain[0].linkedToId) return;
     const chainStart = new Date(chain[0].start);
     let best = null, bestDiff = Infinity;
-    scheduledNaps.forEach(sn => {
+    scheduledNaps.forEach((sn) => {
       if (replacedScheduledNapIds.has(sn.id)) return;
       const diff = Math.abs(new Date(sn.start) - chainStart);
-      if (diff < bestDiff) { bestDiff = diff; best = sn; }
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = sn;
+      }
     });
     if (best) {
       replacedScheduledNapIds.add(best.id);
       napChainToSlot.set(chain[0].id, best.label);
     }
   });
-
   const allTimelineItems = [
     // Include scheduled events EXCEPT naps that have been replaced by a logged nap
-    ...schedule.map(e => ({ ...e, kind: "scheduled" })).filter(e => !(e.type === 'nap' && replacedScheduledNapIds.has(e.id))),
-    ...todaySleeps.filter(s => s.isNight).map(s => ({ id: `night-${s.id}`, kind: "nightSleep", label: "Night Sleep", subLabel: s.end ? durationLabel(diffMins(new Date(s.start), new Date(s.end))) : "Ongoing", start: new Date(s.start), type: "nightSleep", raw: s })),
-    ...compoundNapGroups.map(chain => {
+    ...schedule.map((e) => __spreadProps(__spreadValues({}, e), { kind: "scheduled" })).filter((e) => !(e.type === "nap" && replacedScheduledNapIds.has(e.id))),
+    ...todaySleeps.filter((s) => s.isNight).map((s) => ({ id: `night-${s.id}`, kind: "nightSleep", label: "Night Sleep", subLabel: s.end ? durationLabel(diffMins(new Date(s.start), new Date(s.end))) : "Ongoing", start: new Date(s.start), type: "nightSleep", raw: s })),
+    ...compoundNapGroups.map((chain) => {
       const isCompound = chain.length > 1;
       const totalMs = chain.reduce((sum, s) => sum + (s.end ? new Date(s.end) - new Date(s.start) : 0), 0);
-      const totalMins = Math.round(totalMs / 60000);
-      const slotLabel = napChainToSlot.get(chain[0].id); // e.g. "Nap 1"
-      // If no scheduled slot matched, number this nap by position among today's logged naps
-      const napGroupIndex = compoundNapGroups.filter(g => !g[0].linkedToId).indexOf(chain);
-      const fallbackLabel = napGroupIndex >= 0 ? `Nap ${napGroupIndex + 1}` : 'Nap';
+      const totalMins = Math.round(totalMs / 6e4);
+      const slotLabel = napChainToSlot.get(chain[0].id);
+      const napGroupIndex = compoundNapGroups.filter((g) => !g[0].linkedToId).indexOf(chain);
+      const fallbackLabel = napGroupIndex >= 0 ? `Nap ${napGroupIndex + 1}` : "Nap";
       const baseLabel = slotLabel || fallbackLabel;
       return {
         id: `nap-actual-${chain[0].id}`,
-        kind: isCompound ? 'compoundNap' : 'actualNap',
-        type: 'nap',
-        label: isCompound ? `${baseLabel} · Split` : baseLabel,
+        kind: isCompound ? "compoundNap" : "actualNap",
+        type: "nap",
+        label: isCompound ? `${baseLabel} \xB7 Split` : baseLabel,
         subLabel: totalMins > 0 ? durationLabel(totalMins) : null,
         start: new Date(chain[0].start),
         end: chain[chain.length - 1].end ? new Date(chain[chain.length - 1].end) : null,
-        parts: chain,
+        parts: chain
       };
     }),
-    ...bottleFeeds.map(f => {
+    ...bottleFeeds.map((f) => {
       const vol = parseFloat(f.consumed || f.offered || 0);
-      const ml = f.unit === 'oz' ? Math.round(vol * 29.5735) : vol;
+      const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
       return { id: `feed-${f.id}`, kind: "feed", type: "feed", label: `${ml}ml`, start: strToDate(f.time), raw: f };
-    }),
+    })
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
-
   const typeColors = {
     wake: { bg: PAL.wakeLight, dot: PAL.wake, text: PAL.text },
     nap: { bg: PAL.sleepLight, dot: PAL.sleep, text: PAL.text },
     sleep: { bg: PAL.sleepLight, dot: PAL.primaryDark, text: PAL.text },
     feed: { bg: PAL.feedLight, dot: PAL.feed, text: PAL.text },
-    nightSleep: { bg: PAL.sleepLight, dot: "#7BA7C0", text: PAL.text },
+    nightSleep: { bg: PAL.sleepLight, dot: "#7BA7C0", text: PAL.text }
   };
-
-  return (
-    <div style={{ paddingBottom: 100 }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontFamily: "'Playfair Display',Georgia,serif", fontSize: 22, color: PAL.text }}>Today's Schedule</h2>
-        <button onClick={() => setShowSettings(true)} style={{ background: PAL.soft, border: "none", borderRadius: 10, padding: "8px 14px", color: PAL.primary, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
-          ⚙️ Settings
-        </button>
-      </div>
-
-      {/* Quick stats */}
-      {scheduleSettings && (() => {
-        const now = new Date();
-        const midnight = new Date(now); midnight.setHours(0,0,0,0);
-        // Total nap duration logged today (from actual sleeps, non-night)
-        const completedNapMins = sleeps.filter(s => !s.isNight && s.end && new Date(s.start) >= midnight)
-          .reduce((sum, s) => sum + diffMins(new Date(s.start), new Date(s.end)), 0);
-        // Add current active nap if running
-        const activeNapMins = activeSleep ? diffMins(activeSleep.start, now) : 0;
-        const totalNapMins = completedNapMins + activeNapMins;
-        // Total feed volume today (ml, formula + breast estimated)
-        const totalFeedMl = feeds.filter(f => {
-          const d = strToDate(f.time); return d >= midnight;
-        }).reduce((sum, f) => {
-          if (f.type === 'formula') {
-            const vol = parseFloat(f.consumed || f.offered || 0);
-            return sum + (f.unit === 'oz' ? Math.round(vol * 29.5735) : vol);
+  return /* @__PURE__ */ React.createElement("div", { style: { paddingBottom: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("h2", { style: { margin: 0, fontFamily: "'Figtree', sans-serif", fontSize: 22, color: PAL.text } }, "Today's Schedule"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowSettings(true), style: { background: PAL.soft, border: "none", borderRadius: 10, padding: "8px 14px", color: PAL.primary, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u2699\uFE0F Settings")), scheduleSettings && (() => {
+    const now2 = /* @__PURE__ */ new Date();
+    const midnight = new Date(now2);
+    midnight.setHours(0, 0, 0, 0);
+    const completedNapMins = sleeps.filter((s) => !s.isNight && s.end && new Date(s.start) >= midnight).reduce((sum, s) => sum + diffMins(new Date(s.start), new Date(s.end)), 0);
+    const activeNapMins = activeSleep ? diffMins(activeSleep.start, now2) : 0;
+    const totalNapMins = completedNapMins + activeNapMins;
+    const totalFeedMl = feeds.filter((f) => {
+      const d = strToDate(f.time);
+      return d >= midnight;
+    }).reduce((sum, f) => {
+      if (f.type === "formula") {
+        const vol = parseFloat(f.consumed || f.offered || 0);
+        return sum + (f.unit === "oz" ? Math.round(vol * 29.5735) : vol);
+      }
+      return sum;
+    }, 0);
+    const napEvents = schedule.filter((e) => e.type === "nap");
+    let napStatusLabel = "", napStatusValue = "";
+    if (activeSleep) {
+      napStatusLabel = "Nap duration";
+      const m = Math.floor(activeNapMins);
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      napStatusValue = h > 0 ? `${h}h ${mm}m` : `${mm}m`;
+    } else {
+      const nextNap = napEvents.find((e) => new Date(e.start) > now2);
+      if (nextNap) {
+        napStatusLabel = "Next nap";
+        const minsUntil = diffMins(now2, new Date(nextNap.start));
+        const h = Math.floor(minsUntil / 60);
+        const m = minsUntil % 60;
+        napStatusValue = h > 0 ? `${h}h ${m}m` : `${m}m`;
+      } else {
+        napStatusLabel = "Next nap";
+        napStatusValue = "\u2014";
+      }
+    }
+    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20, overflowX: "auto", paddingBottom: 4 } }, [
+      { label: "Total Naps", value: totalNapMins > 0 ? durationLabel(totalNapMins) : "0m", icon: "\u{1F4A4}" },
+      { label: "Total Feed", value: totalFeedMl > 0 ? `${totalFeedMl}ml` : "0ml", icon: "\u{1F37C}" },
+      { label: napStatusLabel, value: napStatusValue, icon: activeSleep ? "\u23F1" : "\u23F0" }
+    ].map((s) => /* @__PURE__ */ React.createElement("div", { key: s.label, style: { flex: 1, minWidth: 90, background: PAL.card, borderRadius: 14, padding: "12px 10px", textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18 } }, s.icon), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: PAL.text, marginTop: 4 } }, s.value), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: PAL.muted } }, s.label))));
+  })(), activeSleep ? /* @__PURE__ */ React.createElement(
+    NapTimerCard,
+    {
+      activeSleep,
+      lastNapId: ((_a = todaySleeps.filter((s) => !s.isNight).slice(-1)[0]) == null ? void 0 : _a.id) || null,
+      onEnd: (napStart, napEnd, linkedToId) => {
+        const napId = Date.now();
+        onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: false, linkedToId: linkedToId || null });
+        if (linkedToId) {
+          const allNapSleeps = [...todaySleeps, { id: napId, start: napStart, end: napEnd, linkedToId }];
+          let rootId = linkedToId;
+          for (let i = 0; i < 10; i++) {
+            const parent = allNapSleeps.find((s) => s.id === rootId);
+            if (!parent || !parent.linkedToId) break;
+            rootId = parent.linkedToId;
           }
-          return sum; // breast feeds don't count toward ml total
-        }, 0);
-        // Next nap or current nap status
-        const napEvents = schedule.filter(e => e.type === 'nap');
-        let napStatusLabel = '', napStatusValue = '';
-        if (activeSleep) {
-          napStatusLabel = 'Nap duration';
-          const m = Math.floor(activeNapMins); const h = Math.floor(m/60); const mm = m%60;
-          napStatusValue = h > 0 ? `${h}h ${mm}m` : `${mm}m`;
+          const rootSleep = allNapSleeps.find((s) => s.id === rootId);
+          if (rootSleep) {
+            const idx = schedule.findIndex((ev) => ev.type === "nap" && ev._recorded && Math.abs(new Date(ev.start) - new Date(rootSleep.start)) < 60 * 60 * 1e3);
+            if (idx >= 0) {
+              const updated = schedule.map((ev, i) => i === idx ? __spreadProps(__spreadValues({}, ev), { end: napEnd }) : ev);
+              onUpdateSchedule(rebuildFromIndex(updated, idx, scheduleSettings));
+            }
+          }
         } else {
-          const nextNap = napEvents.find(e => new Date(e.start) > now);
-          if (nextNap) {
-            napStatusLabel = 'Next nap';
-            const minsUntil = diffMins(now, new Date(nextNap.start));
-            const h = Math.floor(minsUntil/60); const m = minsUntil%60;
-            napStatusValue = h > 0 ? `${h}h ${m}m` : `${m}m`;
-          } else {
-            napStatusLabel = 'Next nap'; napStatusValue = '—';
+          const unrecorded = schedule.map((ev, idx) => ({ ev, idx })).filter(({ ev }) => ev.type === "nap" && !ev._recorded);
+          if (unrecorded.length > 0) {
+            const { idx: napIdx } = unrecorded.reduce((best, cur) => {
+              const diff = Math.abs(new Date(cur.ev.start) - napStart);
+              return diff < best.diff ? __spreadProps(__spreadValues({}, cur), { diff }) : best;
+            }, { diff: Infinity, idx: -1 });
+            if (napIdx >= 0) {
+              const updated = schedule.map((ev, i) => i === napIdx ? __spreadProps(__spreadValues({}, ev), { start: napStart, end: napEnd, _recorded: true, originalDurationMins: Math.max(ev.originalDurationMins || 0, diffMins(napStart, napEnd)) }) : ev);
+              onUpdateSchedule(rebuildFromIndex(updated, napIdx, scheduleSettings));
+            }
           }
         }
-        return (
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, overflowX: 'auto', paddingBottom: 4 }}>
-            {[
-              { label: 'Total Naps', value: totalNapMins > 0 ? durationLabel(totalNapMins) : '0m', icon: '💤' },
-              { label: 'Total Feed', value: totalFeedMl > 0 ? `${totalFeedMl}ml` : '0ml', icon: '🍼' },
-              { label: napStatusLabel, value: napStatusValue, icon: activeSleep ? '⏱' : '⏰' },
-            ].map(s => (
-              <div key={s.label} style={{ flex: 1, minWidth: 90, background: PAL.card, borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                <div style={{ fontSize: 18 }}>{s.icon}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: PAL.text, marginTop: 4 }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: PAL.muted }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* Active sleep tracker */}
-      {activeSleep ? (
-        <NapTimerCard
-          activeSleep={activeSleep}
-          lastNapId={todaySleeps.filter(s => !s.isNight).slice(-1)[0]?.id || null}
-          onEnd={(napStart, napEnd, linkedToId) => {
-            const napId = Date.now();
-            onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: false, linkedToId: linkedToId || null });
-            if (linkedToId) {
-              // Sub-nap: rebuild from the compound nap's final end
-              const allNapSleeps = [...todaySleeps, { id: napId, start: napStart, end: napEnd, linkedToId }];
-              let rootId = linkedToId;
-              for (let i = 0; i < 10; i++) {
-                const parent = allNapSleeps.find(s => s.id === rootId);
-                if (!parent || !parent.linkedToId) break;
-                rootId = parent.linkedToId;
-              }
-              const rootSleep = allNapSleeps.find(s => s.id === rootId);
-              if (rootSleep) {
-                const idx = schedule.findIndex(ev => ev.type === 'nap' && ev._recorded &&
-                  Math.abs(new Date(ev.start) - new Date(rootSleep.start)) < 60 * 60 * 1000);
-                if (idx >= 0) {
-                  const updated = schedule.map((ev, i) => i === idx ? { ...ev, end: napEnd } : ev);
-                  onUpdateSchedule(rebuildFromIndex(updated, idx, scheduleSettings));
-                }
-              }
-            } else {
-              const unrecorded = schedule.map((ev, idx) => ({ ev, idx })).filter(({ ev }) => ev.type === 'nap' && !ev._recorded);
-              if (unrecorded.length > 0) {
-                const { idx: napIdx } = unrecorded.reduce((best, cur) => {
-                  const diff = Math.abs(new Date(cur.ev.start) - napStart);
-                  return diff < best.diff ? { ...cur, diff } : best;
-                }, { diff: Infinity, idx: -1 });
-                if (napIdx >= 0) {
-                  const updated = schedule.map((ev, i) => i === napIdx ? { ...ev, start: napStart, end: napEnd, _recorded: true, originalDurationMins: Math.max(ev.originalDurationMins || 0, diffMins(napStart, napEnd)) } : ev);
-                  onUpdateSchedule(rebuildFromIndex(updated, napIdx, scheduleSettings));
-                }
-              }
-            }
-            setActiveSleep(null);
-          }}
-        />
-      ) : (
-        <>
-          <button onClick={() => setShowNapModal(true)} style={{ width: "100%", marginBottom: 12, padding: "12px", borderRadius: 12, border: `1.5px dashed ${PAL.sleep}`, background: "transparent", color: PAL.sleep, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit" }}>
-            💤 Log a Nap
-          </button>
-          <button onClick={() => setShowFeedModal(true)} style={{ width: "100%", marginBottom: 12, padding: "12px", borderRadius: 12, border: `1.5px dashed ${PAL.feed}`, background: "transparent", color: PAL.feed, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit" }}>
-            🍼 Log a Feed
-          </button>
-          <button onClick={() => setShowAI(true)} style={{ width: "100%", marginBottom: 20, padding: "12px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, #7C9E8A, #A8C4D4)`, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <span style={{ fontSize: 16 }}>✨</span> Ask AI
-          </button>
-        </>
-      )}
-
-      {/* Timeline */}
-      {schedule.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: PAL.muted }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-          <p style={{ margin: 0, fontSize: 15 }}>No schedule yet.<br />Tap ⚙️ Settings to create one.</p>
-        </div>
-      ) : (
-        <div style={{ position: "relative" }}>
-          <div style={{ position: "absolute", left: 22, top: 0, bottom: 0, width: 2, background: PAL.border, borderRadius: 1 }} />
-          {allTimelineItems.map((ev, i) => {
-            const c = typeColors[ev.type] || typeColors.wake;
-            const isScheduled = ev.kind === "scheduled";
-            const nextEv = allTimelineItems[i + 1];
-            // Use end time if available (naps, compound naps) so the gap reflects
-            // the actual wake window between the end of this event and the start of the next
-
-            // Determine live/past/future state
-            const evStart = new Date(ev.start);
-            const evEnd = ev.end ? new Date(ev.end) : (nextEv ? new Date(nextEv.start) : null);
-            const isLive = evStart <= now && (evEnd ? now < evEnd : true);
-            const isPast = evEnd ? now >= evEnd : evStart < now;
-            return (
-              <div key={ev.id}>
-                <div style={{ display: "flex", gap: 14, alignItems: "flex-start", position: "relative" }}>
-                  <div style={{ width: 46, flexShrink: 0, display: "flex", justifyContent: "center", position: "relative" }}>
-                    {isLive && (
-                      <div style={{ position: "absolute", width: 22, height: 22, borderRadius: "50%", background: c.dot, opacity: 0.25, top: 10, zIndex: 0,
-                        animation: "pulse 1.8s ease-in-out infinite" }} />
-                    )}
-                    <div style={{ width: isLive ? 16 : 14, height: isLive ? 16 : 14, borderRadius: "50%",
-                      background: isPast ? PAL.border : c.dot,
-                      border: `3px solid ${PAL.card}`,
-                      boxShadow: isLive ? `0 0 0 2px ${c.dot}, 0 0 12px ${c.dot}88` : `0 0 0 2px ${isPast ? PAL.border : c.dot}`,
-                      marginTop: isLive ? 13 : 14, zIndex: 1, transition: "all 0.3s" }} />
-                  </div>
-                  {ev.kind === "feed" ? (
-                    <div style={{ width: "50%", background: PAL.feedLight, borderRadius: 14, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center",
-                      opacity: isPast ? 0.5 : 1 }}>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: PAL.feed }}>🍼 {ev.label}</span>
-                      <span style={{ fontSize: 12, color: PAL.muted }}>{fmt12(new Date(ev.start))}</span>
-                    </div>
-                  ) : ev.kind === "compoundNap" ? (
-                    <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `2px solid ${PAL.sleep}`, opacity: isPast ? 0.55 : 1 }}>
-                      {/* Header */}
-                      <div style={{ background: PAL.sleep, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>💤 {ev.label}</span>
-                          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginLeft: 8 }}>{ev.subLabel} total · {ev.parts.length} parts</span>
-                        </div>
-                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{fmt12(new Date(ev.parts[0].start))}</span>
-                      </div>
-                      {/* Sub-nap parts with wake gap between them */}
-                      {ev.parts.map((part, pi) => {
-                        const dur = part.end ? durationLabel(diffMins(new Date(part.start), new Date(part.end))) : 'ongoing';
-                        const nextPart = ev.parts[pi + 1];
-                        const gapMins = part.end && nextPart ? diffMins(new Date(part.end), new Date(nextPart.start)) : null;
-                        return (
-                          <React.Fragment key={part.id}>
-                            <div onClick={() => setEditSleep(part)} style={{ background: pi % 2 === 0 ? PAL.sleepLight : PAL.card, padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${PAL.border}`, cursor: 'pointer' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 13, color: PAL.text, fontWeight: 600 }}>Part {pi + 1}</span>
-                                <span style={{ fontSize: 11, color: PAL.primary }}>✏️</span>
-                              </div>
-                              <span style={{ fontSize: 12, color: PAL.muted }}>{fmt12(new Date(part.start))}{part.end ? ` – ${fmt12(new Date(part.end))}` : ''} · {dur}</span>
-                            </div>
-                            {gapMins !== null && gapMins > 0 && (
-                              <div style={{ background: PAL.wakeLight, padding: '5px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px dashed ${PAL.border}` }}>
-                                <span style={{ fontSize: 11, color: PAL.muted, fontStyle: 'italic' }}>awake</span>
-                                <span style={{ fontSize: 11, color: PAL.muted, fontWeight: 600 }}>{durationLabel(gapMins)}</span>
-                              </div>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  ) : ev.kind === "actualNap" ? (
-                    <div onClick={() => ev.parts && ev.parts[0] && setEditSleep(ev.parts[0])} style={{ flex: 1, background: PAL.sleepLight, borderRadius: 14, padding: '10px 14px', border: `1.5px solid ${PAL.sleep}55`, opacity: isPast ? 0.55 : 1, cursor: 'pointer' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontWeight: 700, fontSize: 14, color: PAL.text }}>💤 {ev.label}</span>
-                          <span style={{ fontSize: 11, color: PAL.primary }}>✏️</span>
-                        </div>
-                        <span style={{ fontSize: 12, color: PAL.muted }}>{fmt12(new Date(ev.start))}{ev.end ? ` – ${fmt12(new Date(ev.end))}` : ''}</span>
-                      </div>
-                      {ev.subLabel && <div style={{ fontSize: 12, color: PAL.muted, marginTop: 2 }}>{ev.subLabel}</div>}
-                    </div>
-                  ) : (
-                    <div style={{ flex: 1, borderRadius: 14, padding: "12px 14px",
-                      cursor: isScheduled && ev.editable ? "pointer" : "default",
-                      background: isLive ? c.dot + "22" : c.bg,
-                      border: isLive ? `2px solid ${c.dot}` : "2px solid transparent",
-                      opacity: isPast ? 0.45 : 1,
-                      transition: "all 0.3s" }}
-                      onClick={() => isScheduled && ev.editable && setEditEvent(ev)}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {isLive && <span style={{ fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 }}>NOW</span>}
-                          <span style={{ fontWeight: isLive ? 800 : 700, fontSize: 14, color: PAL.text }}>{ev.label}</span>
-                          {ev.subLabel && <span style={{ fontSize: 12, color: PAL.muted }}>{ev.subLabel}</span>}
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <span style={{ fontSize: 13, color: PAL.muted }}>{fmt12(new Date(ev.start))}</span>
-                            {isScheduled && ev.editable && <span style={{ fontSize: 11, color: PAL.primary }}>✏️</span>}
-                          </div>
-                          {ev.type === "nap" && ev.end && (
-                            <span style={{ fontSize: 12, color: PAL.muted }}>until {fmt12(new Date(ev.end))} · {durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))}</span>
-                          )}
-                          {ev.type === "wake" && nextEv && (
-                            <span style={{ fontSize: 12, color: PAL.muted }}>until {fmt12(new Date(nextEv.start))} · {durationLabel(diffMins(new Date(ev.start), new Date(nextEv.start)))}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Modals */}
-      {showSettings && <ScheduleSettingsModal settings={scheduleSettings} onSave={s => { localStorage.setItem('lb_settings', JSON.stringify(s)); onSaveScheduleSettings(s); onUpdateSchedule(generateSchedule(s)); }} onClose={() => setShowSettings(false)} />}
-      {showNapModal && <NapLogModal
-        todaySleeps={todaySleeps}
-        schedule={schedule}
-        scheduleSettings={scheduleSettings}
-        activeSleep={activeSleep}
-        onStartTimer={() => { setActiveSleep({ start: new Date() }); setShowNapModal(false); }}
-        onSaveNap={(napStart, napEnd, linkedToId) => {
-          const napId = Date.now();
-          onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: false, linkedToId: linkedToId || null });
-          if (linkedToId) {
-            // This is a sub-nap. Find the chain root sleep record to locate the replaced scheduled slot.
-            // The chain root is the sleep whose id = linkedToId (or its root).
-            // We rebuild from napEnd so the wake window after the compound nap is correctly placed.
-            const allNapSleeps = [...todaySleeps, { id: napId, start: napStart, end: napEnd, linkedToId }];
-            // Walk up the chain to find the root
-            let rootId = linkedToId;
-            for (let i = 0; i < 10; i++) {
-              const parent = allNapSleeps.find(s => s.id === rootId);
-              if (!parent || !parent.linkedToId) break;
-              rootId = parent.linkedToId;
-            }
-            const rootSleep = allNapSleeps.find(s => s.id === rootId);
-            if (rootSleep) {
-              // Find the scheduled nap replaced by this chain root
-              const napIdx = schedule.findIndex(ev => ev.type === 'nap' && ev._recorded &&
-                Math.abs(new Date(ev.start) - new Date(rootSleep.start)) < 60 * 60 * 1000);
-              const fallbackIdx = schedule.findIndex(ev => ev.type === 'nap' && ev._recorded);
-              const idx = napIdx >= 0 ? napIdx : fallbackIdx;
-              if (idx >= 0) {
-                // Rebuild from the compound nap's final end (napEnd = last part end)
-                const updated = schedule.map((ev, i) => i === idx ? { ...ev, end: napEnd } : ev);
-                onUpdateSchedule(rebuildFromIndex(updated, idx, scheduleSettings));
-              }
-            }
-          } else {
-            // Root nap — find the closest unrecorded scheduled nap and replace it
-            const unrecorded = schedule.map((ev, idx) => ({ ev, idx })).filter(({ ev }) => ev.type === 'nap' && !ev._recorded);
-            if (unrecorded.length > 0) {
-              const { idx: napIdx } = unrecorded.reduce((best, cur) => {
-                const diff = Math.abs(new Date(cur.ev.start) - napStart);
-                return diff < best.diff ? { ...cur, diff } : best;
-              }, { diff: Infinity, idx: -1 });
-              if (napIdx >= 0) {
-                const updated = schedule.map((ev, i) => i === napIdx ? { ...ev, start: napStart, end: napEnd, _recorded: true, originalDurationMins: Math.max(ev.originalDurationMins || 0, diffMins(napStart, napEnd)) } : ev);
-                onUpdateSchedule(rebuildFromIndex(updated, napIdx, scheduleSettings));
-              }
+        setActiveSleep(null);
+      }
+    }
+  ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: () => setShowNapModal(true), style: { width: "100%", marginBottom: 12, padding: "12px", borderRadius: 12, border: `1.5px dashed ${PAL.sleep}`, background: "transparent", color: PAL.sleep, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit" } }, "\u{1F4A4} Log a Nap"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowFeedModal(true), style: { width: "100%", marginBottom: 12, padding: "12px", borderRadius: 12, border: `1.5px dashed ${PAL.feed}`, background: "transparent", color: PAL.feed, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit" } }, "\u{1F37C} Log a Feed"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowAI(true), style: { width: "100%", marginBottom: 20, padding: "12px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, #7C9E8A, #A8C4D4)`, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u2728"), " Ask AI")), schedule.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "40px 20px", color: PAL.muted } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1F4C5}"), /* @__PURE__ */ React.createElement("p", { style: { margin: 0, fontSize: 15 } }, "No schedule yet.", /* @__PURE__ */ React.createElement("br", null), "Tap \u2699\uFE0F Settings to create one.")) : /* @__PURE__ */ React.createElement("div", { style: { position: "relative" } }, /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: 22, top: 0, bottom: 0, width: 2, background: PAL.border, borderRadius: 1 } }), allTimelineItems.map((ev, i) => {
+    const c = typeColors[ev.type] || typeColors.wake;
+    const isScheduled = ev.kind === "scheduled";
+    const nextEv = allTimelineItems[i + 1];
+    const evStart = new Date(ev.start);
+    const evEnd = ev.end ? new Date(ev.end) : nextEv ? new Date(nextEv.start) : null;
+    const isLive = evStart <= now && (evEnd ? now < evEnd : true);
+    const isPast = evEnd ? now >= evEnd : evStart < now;
+    return /* @__PURE__ */ React.createElement("div", { key: ev.id }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 14, alignItems: "flex-start", position: "relative" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 46, flexShrink: 0, display: "flex", justifyContent: "center", position: "relative" } }, isLive && /* @__PURE__ */ React.createElement("div", { style: {
+      position: "absolute",
+      width: 22,
+      height: 22,
+      borderRadius: "50%",
+      background: c.dot,
+      opacity: 0.25,
+      top: 10,
+      zIndex: 0,
+      animation: "pulse 1.8s ease-in-out infinite"
+    } }), /* @__PURE__ */ React.createElement("div", { style: {
+      width: isLive ? 16 : 14,
+      height: isLive ? 16 : 14,
+      borderRadius: "50%",
+      background: isPast ? PAL.border : c.dot,
+      border: `3px solid ${PAL.card}`,
+      boxShadow: isLive ? `0 0 0 2px ${c.dot}, 0 0 12px ${c.dot}88` : `0 0 0 2px ${isPast ? PAL.border : c.dot}`,
+      marginTop: isLive ? 13 : 14,
+      zIndex: 1,
+      transition: "all 0.3s"
+    } })), ev.kind === "feed" ? /* @__PURE__ */ React.createElement("div", { style: {
+      width: "50%",
+      background: PAL.feedLight,
+      borderRadius: 14,
+      padding: "8px 12px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      opacity: isPast ? 0.5 : 1
+    } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 13, color: PAL.feed } }, "\u{1F37C} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, fmt12(new Date(ev.start)))) : ev.kind === "compoundNap" ? /* @__PURE__ */ React.createElement("div", { style: { flex: 1, borderRadius: 14, overflow: "hidden", border: `2px solid ${PAL.sleep}`, opacity: isPast ? 0.55 : 1 } }, /* @__PURE__ */ React.createElement("div", { style: { background: PAL.sleep, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: "#fff" } }, "\u{1F4A4} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginLeft: 8 } }, ev.subLabel, " total \xB7 ", ev.parts.length, " parts")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "rgba(255,255,255,0.75)" } }, fmt12(new Date(ev.parts[0].start)))), ev.parts.map((part, pi) => {
+      const dur = part.end ? durationLabel(diffMins(new Date(part.start), new Date(part.end))) : "ongoing";
+      const nextPart = ev.parts[pi + 1];
+      const gapMins = part.end && nextPart ? diffMins(new Date(part.end), new Date(nextPart.start)) : null;
+      return /* @__PURE__ */ React.createElement(React.Fragment, { key: part.id }, /* @__PURE__ */ React.createElement("div", { onClick: () => setEditSleep(part), style: { background: pi % 2 === 0 ? PAL.sleepLight : PAL.card, padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${PAL.border}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.text, fontWeight: 600 } }, "Part ", pi + 1), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, fmt12(new Date(part.start)), part.end ? ` \u2013 ${fmt12(new Date(part.end))}` : "", " \xB7 ", dur)), gapMins !== null && gapMins > 0 && /* @__PURE__ */ React.createElement("div", { style: { background: PAL.wakeLight, padding: "5px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px dashed ${PAL.border}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.muted, fontStyle: "italic" } }, "awake"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.muted, fontWeight: 600 } }, durationLabel(gapMins))));
+    })) : ev.kind === "actualNap" ? /* @__PURE__ */ React.createElement("div", { onClick: () => ev.parts && ev.parts[0] && setEditSleep(ev.parts[0]), style: { flex: 1, background: PAL.sleepLight, borderRadius: 14, padding: "10px 14px", border: `1.5px solid ${PAL.sleep}55`, opacity: isPast ? 0.55 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, "\u{1F4A4} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, fmt12(new Date(ev.start)), ev.end ? ` \u2013 ${fmt12(new Date(ev.end))}` : "")), ev.subLabel && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, ev.subLabel)) : /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        style: {
+          flex: 1,
+          borderRadius: 14,
+          padding: "12px 14px",
+          cursor: isScheduled && ev.editable ? "pointer" : "default",
+          background: isLive ? c.dot + "22" : c.bg,
+          border: isLive ? `2px solid ${c.dot}` : "2px solid transparent",
+          opacity: isPast ? 0.45 : 1,
+          transition: "all 0.3s"
+        },
+        onClick: () => isScheduled && ev.editable && setEditEvent(ev)
+      },
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : 700, fontSize: 14, color: PAL.text } }, ev.label), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, fmt12(new Date(ev.start))), isScheduled && ev.editable && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), ev.type === "nap" && ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(ev.end)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))), ev.type === "wake" && nextEv && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(nextEv.start)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(nextEv.start))))))
+    )));
+  })), showSettings && /* @__PURE__ */ React.createElement(ScheduleSettingsModal, { settings: scheduleSettings, onSave: (s) => {
+    localStorage.setItem("lb_settings", JSON.stringify(s));
+    onSaveScheduleSettings(s);
+    onUpdateSchedule(generateSchedule(s));
+  }, onClose: () => setShowSettings(false) }), showNapModal && /* @__PURE__ */ React.createElement(
+    NapLogModal,
+    {
+      todaySleeps,
+      schedule,
+      scheduleSettings,
+      activeSleep,
+      onStartTimer: () => {
+        setActiveSleep({ start: /* @__PURE__ */ new Date() });
+        setShowNapModal(false);
+      },
+      onSaveNap: (napStart, napEnd, linkedToId) => {
+        const napId = Date.now();
+        onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: false, linkedToId: linkedToId || null });
+        if (linkedToId) {
+          const allNapSleeps = [...todaySleeps, { id: napId, start: napStart, end: napEnd, linkedToId }];
+          let rootId = linkedToId;
+          for (let i = 0; i < 10; i++) {
+            const parent = allNapSleeps.find((s) => s.id === rootId);
+            if (!parent || !parent.linkedToId) break;
+            rootId = parent.linkedToId;
+          }
+          const rootSleep = allNapSleeps.find((s) => s.id === rootId);
+          if (rootSleep) {
+            const napIdx = schedule.findIndex((ev) => ev.type === "nap" && ev._recorded && Math.abs(new Date(ev.start) - new Date(rootSleep.start)) < 60 * 60 * 1e3);
+            const fallbackIdx = schedule.findIndex((ev) => ev.type === "nap" && ev._recorded);
+            const idx = napIdx >= 0 ? napIdx : fallbackIdx;
+            if (idx >= 0) {
+              const updated = schedule.map((ev, i) => i === idx ? __spreadProps(__spreadValues({}, ev), { end: napEnd }) : ev);
+              onUpdateSchedule(rebuildFromIndex(updated, idx, scheduleSettings));
             }
           }
-          setShowNapModal(false);
-        }}
-        onClose={() => setShowNapModal(false)}
-      />}
-      {editSleep && (
-        <SleepModal
-          initial={editSleep}
-          isNight={false}
-          onSave={(updated) => {
-            // Update the sleep record
-            onSaveSleep(updated);
-            // Find which scheduled nap slot this sleep belongs to and rebuild
-            const napSleepsUpdated = [...todaySleeps.filter(s => s.id !== updated.id), updated]
-              .filter(s => !s.isNight);
-            // Find root of this sleep's chain
-            let rootId = updated.linkedToId ? updated.linkedToId : updated.id;
-            for (let i = 0; i < 10; i++) {
-              const parent = napSleepsUpdated.find(s => s.id === rootId);
-              if (!parent || !parent.linkedToId) break;
-              rootId = parent.linkedToId;
+        } else {
+          const unrecorded = schedule.map((ev, idx) => ({ ev, idx })).filter(({ ev }) => ev.type === "nap" && !ev._recorded);
+          if (unrecorded.length > 0) {
+            const { idx: napIdx } = unrecorded.reduce((best, cur) => {
+              const diff = Math.abs(new Date(cur.ev.start) - napStart);
+              return diff < best.diff ? __spreadProps(__spreadValues({}, cur), { diff }) : best;
+            }, { diff: Infinity, idx: -1 });
+            if (napIdx >= 0) {
+              const updated = schedule.map((ev, i) => i === napIdx ? __spreadProps(__spreadValues({}, ev), { start: napStart, end: napEnd, _recorded: true, originalDurationMins: Math.max(ev.originalDurationMins || 0, diffMins(napStart, napEnd)) }) : ev);
+              onUpdateSchedule(rebuildFromIndex(updated, napIdx, scheduleSettings));
             }
-            const rootSleep = napSleepsUpdated.find(s => s.id === rootId);
-            if (rootSleep) {
-              const napIdx = schedule.findIndex(ev =>
-                ev.type === 'nap' && ev._recorded &&
-                Math.abs(new Date(ev.start) - new Date(rootSleep.start)) < 2 * 60 * 60 * 1000
-              );
-              if (napIdx >= 0) {
-                // Use the latest end time of the whole chain as the rebuild cursor
-                const chainEnd = napSleepsUpdated
-                  .filter(s => {
-                    let id = s.linkedToId;
-                    while (id) {
-                      if (id === rootId) return true;
-                      const p = napSleepsUpdated.find(x => x.id === id);
-                      id = p?.linkedToId;
-                    }
-                    return s.id === rootId;
-                  })
-                  .reduce((latest, s) => s.end && new Date(s.end) > latest ? new Date(s.end) : latest, new Date(rootSleep.end || rootSleep.start));
-                const updatedSchedule = schedule.map((ev, i) =>
-                  i === napIdx ? { ...ev, end: chainEnd } : ev
-                );
-                onUpdateSchedule(rebuildFromIndex(updatedSchedule, napIdx, scheduleSettings));
+          }
+        }
+        setShowNapModal(false);
+      },
+      onClose: () => setShowNapModal(false)
+    }
+  ), editSleep && /* @__PURE__ */ React.createElement(
+    SleepModal,
+    {
+      initial: editSleep,
+      isNight: false,
+      onSave: (updated) => {
+        onSaveSleep(updated);
+        const napSleepsUpdated = [...todaySleeps.filter((s) => s.id !== updated.id), updated].filter((s) => !s.isNight);
+        let rootId = updated.linkedToId ? updated.linkedToId : updated.id;
+        for (let i = 0; i < 10; i++) {
+          const parent = napSleepsUpdated.find((s) => s.id === rootId);
+          if (!parent || !parent.linkedToId) break;
+          rootId = parent.linkedToId;
+        }
+        const rootSleep = napSleepsUpdated.find((s) => s.id === rootId);
+        if (rootSleep) {
+          const napIdx = schedule.findIndex(
+            (ev) => ev.type === "nap" && ev._recorded && Math.abs(new Date(ev.start) - new Date(rootSleep.start)) < 2 * 60 * 60 * 1e3
+          );
+          if (napIdx >= 0) {
+            const chainEnd = napSleepsUpdated.filter((s) => {
+              let id = s.linkedToId;
+              while (id) {
+                if (id === rootId) return true;
+                const p = napSleepsUpdated.find((x) => x.id === id);
+                id = p == null ? void 0 : p.linkedToId;
               }
-            }
-            setEditSleep(null);
-          }}
-          onClose={() => setEditSleep(null)}
-        />
-      )}
-      {showAI && <AILogModal
-        schedule={schedule}
-        scheduleSettings={scheduleSettings}
-        onSaveFeed={onSaveFeed}
-        onSaveSleep={onSaveSleep}
-        onUpdateSchedule={onUpdateSchedule}
-        onClose={() => setShowAI(false)}
-      />}
-      {editEvent && <EditEventModal event={editEvent} scheduleSettings={scheduleSettings} allEvents={schedule} onSave={onUpdateSchedule} onClose={() => setEditEvent(null)} />}
-      {(showFeedModal || editFeed) && <FeedModal initial={editFeed} onSave={onSaveFeed} onClose={() => { setShowFeedModal(false); setEditFeed(null); }} />}
-      {showNightSleep && <SleepModal isNight onSave={onSaveSleep} onClose={() => setShowNightSleep(false)} />}
-    </div>
-  );
+              return s.id === rootId;
+            }).reduce((latest, s) => s.end && new Date(s.end) > latest ? new Date(s.end) : latest, new Date(rootSleep.end || rootSleep.start));
+            const updatedSchedule = schedule.map(
+              (ev, i) => i === napIdx ? __spreadProps(__spreadValues({}, ev), { end: chainEnd }) : ev
+            );
+            onUpdateSchedule(rebuildFromIndex(updatedSchedule, napIdx, scheduleSettings));
+          }
+        }
+        setEditSleep(null);
+      },
+      onClose: () => setEditSleep(null)
+    }
+  ), showAI && /* @__PURE__ */ React.createElement(
+    AILogModal,
+    {
+      schedule,
+      scheduleSettings,
+      onSaveFeed,
+      onSaveSleep,
+      onUpdateSchedule,
+      onClose: () => setShowAI(false)
+    }
+  ), editEvent && /* @__PURE__ */ React.createElement(EditEventModal, { event: editEvent, scheduleSettings, allEvents: schedule, onSave: onUpdateSchedule, onClose: () => setEditEvent(null) }), (showFeedModal || editFeed) && /* @__PURE__ */ React.createElement(FeedModal, { initial: editFeed, onSave: onSaveFeed, onClose: () => {
+    setShowFeedModal(false);
+    setEditFeed(null);
+  } }), showNightSleep && /* @__PURE__ */ React.createElement(SleepModal, { isNight: true, onSave: onSaveSleep, onClose: () => setShowNightSleep(false) }));
 }
-
-// ─── Summary Tab ──────────────────────────────────────────────────────────────
 function SummaryTab({ feeds, sleeps }) {
-  const today = new Date();
-  const todayFeeds = feeds.filter(f => strToDate(f.time).toDateString() === today.toDateString());
-  const todaySleeps = sleeps.filter(s => new Date(s.start).toDateString() === today.toDateString() && s.end);
-
-  const totalOz = todayFeeds.filter(f => f.type !== "breast" && f.unit === "oz").reduce((a, f) => a + (f.consumed || 0), 0);
-  const totalMl = todayFeeds.filter(f => f.type !== "breast" && f.unit === "ml").reduce((a, f) => a + (f.consumed || 0), 0);
-  const breastFeeds = todayFeeds.filter(f => f.type === "breast").length;
+  const today = /* @__PURE__ */ new Date();
+  const todayFeeds = feeds.filter((f) => strToDate(f.time).toDateString() === today.toDateString());
+  const todaySleeps = sleeps.filter((s) => new Date(s.start).toDateString() === today.toDateString() && s.end);
+  const totalOz = todayFeeds.filter((f) => f.type !== "breast" && f.unit === "oz").reduce((a, f) => a + (f.consumed || 0), 0);
+  const totalMl = todayFeeds.filter((f) => f.type !== "breast" && f.unit === "ml").reduce((a, f) => a + (f.consumed || 0), 0);
+  const breastFeeds = todayFeeds.filter((f) => f.type === "breast").length;
   const totalSleepMins = todaySleeps.reduce((a, s) => a + diffMins(new Date(s.start), new Date(s.end)), 0);
-
-  const Card = ({ icon, value, label, sub, color }) => (
-    <div style={{ background: PAL.card, borderRadius: 18, padding: "18px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-      <div style={{ fontSize: 28 }}>{icon}</div>
-      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 26, fontWeight: 700, color: color || PAL.text, marginTop: 8 }}>{value}</div>
-      <div style={{ fontSize: 13, color: PAL.text, fontWeight: 600, marginTop: 2 }}>{label}</div>
-      {sub && <div style={{ fontSize: 12, color: PAL.muted, marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
-
-  return (
-    <div>
-      <h2 style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 22, color: PAL.text, marginBottom: 20 }}>Today's Summary</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
-        <Card icon="🍼" value={totalOz > 0 ? `${totalOz}oz` : totalMl > 0 ? `${totalMl}ml` : "—"} label="Formula today" sub={`${todayFeeds.filter(f => f.type !== "breast").length} feeds`} color={PAL.feed} />
-        <Card icon="🤱" value={breastFeeds || "—"} label="Breast feeds" color={PAL.feed} />
-        <Card icon="💤" value={totalSleepMins > 0 ? durationLabel(totalSleepMins) : "—"} label="Total sleep" sub={`${todaySleeps.length} sleeps`} color={PAL.sleep} />
-        <Card icon="📊" value={todayFeeds.length} label="Total feeds" color={PAL.primary} />
-      </div>
-
-      <h3 style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 17, color: PAL.text, margin: "0 0 12px" }}>Feed History</h3>
-      {todayFeeds.length === 0 ? <p style={{ color: PAL.muted, fontSize: 14 }}>No feeds logged today.</p> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {[...todayFeeds].reverse().map(f => (
-            <div key={f.id} style={{ background: PAL.feedLight, borderRadius: 14, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span style={{ fontWeight: 700, fontSize: 14, color: PAL.text }}>
-                  {f.type === "breast" ? `🤱 Breast (${f.side})` : "🍼 Formula"}
-                </span>
-                {f.type !== "breast" && f.consumed !== null && (
-                  <div style={{ fontSize: 12, color: PAL.muted, marginTop: 2 }}>
-                    Drank {f.consumed}{f.unit} of {f.offered}{f.unit} offered
-                    {f.offered > 0 && <span style={{ marginLeft: 6, background: PAL.feed, color: "#fff", borderRadius: 6, padding: "1px 6px", fontSize: 11 }}>
-                      {Math.round((f.consumed / f.offered) * 100)}%
-                    </span>}
-                  </div>
-                )}
-                {f.type === "breast" && f.duration && <div style={{ fontSize: 12, color: PAL.muted, marginTop: 2 }}>{f.duration} minutes</div>}
-              </div>
-              <span style={{ fontSize: 13, color: PAL.muted }}>{fmt12str(f.time)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <h3 style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 17, color: PAL.text, margin: "20px 0 12px" }}>Sleep History</h3>
-      {todaySleeps.length === 0 ? <p style={{ color: PAL.muted, fontSize: 14 }}>No completed sleeps logged today.</p> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {[...todaySleeps].reverse().map(s => (
-            <div key={s.id} style={{ background: PAL.sleepLight, borderRadius: 14, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span style={{ fontWeight: 700, fontSize: 14, color: PAL.text }}>{s.isNight ? "🌙 Night Sleep" : "💤 Nap"}</span>
-                <div style={{ fontSize: 12, color: PAL.muted, marginTop: 2 }}>{durationLabel(diffMins(new Date(s.start), new Date(s.end)))}</div>
-              </div>
-              <span style={{ fontSize: 13, color: PAL.muted }}>{fmt12(new Date(s.start))} – {fmt12(new Date(s.end))}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const Card = ({ icon, value, label, sub, color }) => /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: 18, padding: "18px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 28 } }, icon), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 26, fontWeight: 700, color: color || PAL.text, marginTop: 8 } }, value), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.text, fontWeight: 600, marginTop: 2 } }, label), sub && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, sub));
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h2", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 22, color: PAL.text, marginBottom: 20 } }, "Today's Summary"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 } }, /* @__PURE__ */ React.createElement(Card, { icon: "\u{1F37C}", value: totalOz > 0 ? `${totalOz}oz` : totalMl > 0 ? `${totalMl}ml` : "\u2014", label: "Formula today", sub: `${todayFeeds.filter((f) => f.type !== "breast").length} feeds`, color: PAL.feed }), /* @__PURE__ */ React.createElement(Card, { icon: "\u{1F931}", value: breastFeeds || "\u2014", label: "Breast feeds", color: PAL.feed }), /* @__PURE__ */ React.createElement(Card, { icon: "\u{1F4A4}", value: totalSleepMins > 0 ? durationLabel(totalSleepMins) : "\u2014", label: "Total sleep", sub: `${todaySleeps.length} sleeps`, color: PAL.sleep }), /* @__PURE__ */ React.createElement(Card, { icon: "\u{1F4CA}", value: todayFeeds.length, label: "Total feeds", color: PAL.primary })), /* @__PURE__ */ React.createElement("h3", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 17, color: PAL.text, margin: "0 0 12px" } }, "Feed History"), todayFeeds.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, fontSize: 14 } }, "No feeds logged today.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, [...todayFeeds].reverse().map((f) => /* @__PURE__ */ React.createElement("div", { key: f.id, style: { background: PAL.feedLight, borderRadius: 14, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, f.type === "breast" ? `\u{1F931} Breast (${f.side})` : "\u{1F37C} Formula"), f.type !== "breast" && f.consumed !== null && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, "Drank ", f.consumed, f.unit, " of ", f.offered, f.unit, " offered", f.offered > 0 && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, background: PAL.feed, color: "#fff", borderRadius: 6, padding: "1px 6px", fontSize: 11 } }, Math.round(f.consumed / f.offered * 100), "%")), f.type === "breast" && f.duration && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, f.duration, " minutes")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, fmt12str(f.time))))), /* @__PURE__ */ React.createElement("h3", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 17, color: PAL.text, margin: "20px 0 12px" } }, "Sleep History"), todaySleeps.length === 0 ? /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, fontSize: 14 } }, "No completed sleeps logged today.") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, [...todaySleeps].reverse().map((s) => /* @__PURE__ */ React.createElement("div", { key: s.id, style: { background: PAL.sleepLight, borderRadius: 14, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, s.isNight ? "\u{1F319} Night Sleep" : "\u{1F4A4} Nap"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, durationLabel(diffMins(new Date(s.start), new Date(s.end))))), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, fmt12(new Date(s.start)), " \u2013 ", fmt12(new Date(s.end)))))));
 }
-
-// ─── Settings Tab ─────────────────────────────────────────────────────────────
 function SettingsTab({ user, onLogout }) {
   const [showInvite, setShowInvite] = useState(false);
-  const Row = ({ icon, label, sub, onClick, danger }) => (
-    <button onClick={onClick} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: PAL.card, border: "none", borderRadius: 14, padding: "14px 16px", cursor: "pointer", textAlign: "left", fontFamily: "inherit", marginBottom: 8, boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-      <span style={{ fontSize: 22 }}>{icon}</span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: danger ? "#E05555" : PAL.text }}>{label}</div>
-        {sub && <div style={{ fontSize: 12, color: PAL.muted, marginTop: 1 }}>{sub}</div>}
-      </div>
-      <span style={{ color: PAL.muted, fontSize: 18 }}>›</span>
-    </button>
-  );
-  return (
-    <div>
-      <div style={{ background: PAL.primary, borderRadius: 18, padding: "20px 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
-        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-          {user.name[0].toUpperCase()}
-        </div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 17, color: "#fff" }}>{user.name}</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>{user.email}</div>
-        </div>
-      </div>
-      <Row icon="👥" label="Invite Partner" sub="Share access to this account" onClick={() => setShowInvite(true)} />
-      <Row icon="👶" label="Baby Profile" sub="Name, date of birth" onClick={() => {}} />
-      <Row icon="🔔" label="Notifications" sub="Reminders & alerts" onClick={() => {}} />
-      <Row icon="🔒" label="Privacy & Security" onClick={() => {}} />
-      <Row icon="🚪" label="Sign Out" danger onClick={onLogout} />
-      {showInvite && <InviteModal onClose={() => setShowInvite(false)} />}
-    </div>
-  );
+  const Row = ({ icon, label, sub, onClick, danger }) => /* @__PURE__ */ React.createElement("button", { onClick, style: { width: "100%", display: "flex", alignItems: "center", gap: 14, background: PAL.card, border: "none", borderRadius: 14, padding: "14px 16px", cursor: "pointer", textAlign: "left", fontFamily: "inherit", marginBottom: 8, boxShadow: "0 1px 6px rgba(0,0,0,0.04)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, icon), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 600, color: danger ? "#E05555" : PAL.text } }, label), sub && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 1 } }, sub)), /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontSize: 18 } }, "\u203A"));
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { background: PAL.primary, borderRadius: 18, padding: "20px 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 } }, user.name[0].toUpperCase()), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: 17, color: "#fff" } }, user.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 2 } }, user.email))), /* @__PURE__ */ React.createElement(Row, { icon: "\u{1F465}", label: "Invite Partner", sub: "Share access to this account", onClick: () => setShowInvite(true) }), /* @__PURE__ */ React.createElement(Row, { icon: "\u{1F476}", label: "Baby Profile", sub: "Name, date of birth", onClick: () => {
+  } }), /* @__PURE__ */ React.createElement(Row, { icon: "\u{1F514}", label: "Notifications", sub: "Reminders & alerts", onClick: () => {
+  } }), /* @__PURE__ */ React.createElement(Row, { icon: "\u{1F512}", label: "Privacy & Security", onClick: () => {
+  } }), /* @__PURE__ */ React.createElement(Row, { icon: "\u{1F6AA}", label: "Sign Out", danger: true, onClick: onLogout }), showInvite && /* @__PURE__ */ React.createElement(InviteModal, { onClose: () => setShowInvite(false) }));
 }
-
-// ─── Main App ─────────────────────────────────────────────────────────────────
 const DEFAULT_SETTINGS = {
   wakeTime: "07:00",
   bedTime: "19:30",
@@ -1750,155 +1170,157 @@ const DEFAULT_SETTINGS = {
   wakeWindowMins: 180,
   napDurationMins: 35,
   bedtimeToleranceMins: 60,
-  bridgingNapMins: 20,
+  bridgingNapMins: 20
 };
-
-export default function App() {
-  // ── Clear all stored data so the app starts fresh as a new user ──
+function App() {
   useEffect(() => {
-    ['lb_user','lb_baby','lb_settings','lb_schedule','lb_feeds','lb_sleeps'].forEach(k => localStorage.removeItem(k));
+    ["lb_user", "lb_baby", "lb_settings", "lb_schedule", "lb_feeds", "lb_sleeps"].forEach((k) => localStorage.removeItem(k));
   }, []);
-
   const [user, setUser] = useState(() => {
-    try { const u = localStorage.getItem('lb_user'); return u ? JSON.parse(u) : null; } catch { return null; }
+    try {
+      const u = localStorage.getItem("lb_user");
+      return u ? JSON.parse(u) : null;
+    } catch (e) {
+      return null;
+    }
   });
   const [babyProfile, setBabyProfile] = useState(() => {
-    try { const b = localStorage.getItem('lb_baby'); return b ? JSON.parse(b) : null; } catch { return null; }
+    try {
+      const b = localStorage.getItem("lb_baby");
+      return b ? JSON.parse(b) : null;
+    } catch (e) {
+      return null;
+    }
   });
   const [tab, setTab] = useState("schedule");
-
   const [feeds, setFeeds] = useState(() => {
-    try { const f = localStorage.getItem('lb_feeds'); return f ? JSON.parse(f) : []; } catch { return []; }
+    try {
+      const f = localStorage.getItem("lb_feeds");
+      return f ? JSON.parse(f) : [];
+    } catch (e) {
+      return [];
+    }
   });
   const [sleeps, setSleeps] = useState(() => {
-    try { const s = localStorage.getItem('lb_sleeps'); return s ? JSON.parse(s) : []; } catch { return []; }
+    try {
+      const s = localStorage.getItem("lb_sleeps");
+      return s ? JSON.parse(s) : [];
+    } catch (e) {
+      return [];
+    }
   });
   const [scheduleSettings, setScheduleSettings] = useState(() => {
-    try { const s = localStorage.getItem('lb_settings'); return s ? JSON.parse(s) : DEFAULT_SETTINGS; } catch { return DEFAULT_SETTINGS; }
+    try {
+      const s = localStorage.getItem("lb_settings");
+      return s ? JSON.parse(s) : DEFAULT_SETTINGS;
+    } catch (e) {
+      return DEFAULT_SETTINGS;
+    }
   });
   const [schedule, setSchedule] = useState(() => {
     try {
-      const saved = localStorage.getItem('lb_schedule');
+      const saved = localStorage.getItem("lb_schedule");
       if (saved) {
-        // Rehydrate Date objects
         const parsed = JSON.parse(saved);
-        return parsed.map(e => ({
-          ...e,
+        return parsed.map((e) => __spreadProps(__spreadValues({}, e), {
           start: e.start ? new Date(e.start) : null,
-          end: e.end ? new Date(e.end) : null,
+          end: e.end ? new Date(e.end) : null
         }));
       }
-      // No saved schedule — generate from saved settings if baby profile exists
-      const baby = localStorage.getItem('lb_baby');
-      const settings = localStorage.getItem('lb_settings');
+      const baby = localStorage.getItem("lb_baby");
+      const settings = localStorage.getItem("lb_settings");
       if (baby && settings) return generateSchedule(JSON.parse(settings));
-    } catch {}
+    } catch (e) {
+    }
     return [];
   });
-
   const handleAuth = useCallback((u) => {
-    localStorage.setItem('lb_user', JSON.stringify(u));
+    localStorage.setItem("lb_user", JSON.stringify(u));
     setUser(u);
   }, []);
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('lb_user');
+    localStorage.removeItem("lb_user");
     setUser(null);
   }, []);
-
   const handleOnboardingComplete = useCallback((baby, settings) => {
-    localStorage.setItem('lb_baby', JSON.stringify(baby));
-    localStorage.setItem('lb_settings', JSON.stringify(settings));
+    localStorage.setItem("lb_baby", JSON.stringify(baby));
+    localStorage.setItem("lb_settings", JSON.stringify(settings));
     setBabyProfile(baby);
     setScheduleSettings(settings);
     const newSchedule = generateSchedule(settings);
-    localStorage.setItem('lb_schedule', JSON.stringify(newSchedule));
+    localStorage.setItem("lb_schedule", JSON.stringify(newSchedule));
     setSchedule(newSchedule);
   }, []);
-
   const saveSchedule = useCallback((sched) => {
-    localStorage.setItem('lb_schedule', JSON.stringify(sched));
+    localStorage.setItem("lb_schedule", JSON.stringify(sched));
     setSchedule(sched);
   }, []);
-
-  const saveFeed = useCallback((f) => setFeeds(prev => {
+  const saveFeed = useCallback((f) => setFeeds((prev) => {
     const next = (() => {
-      const idx = prev.findIndex(x => x.id === f.id);
-      if (idx >= 0) { const n = [...prev]; n[idx] = f; return n; }
+      const idx = prev.findIndex((x) => x.id === f.id);
+      if (idx >= 0) {
+        const n = [...prev];
+        n[idx] = f;
+        return n;
+      }
       return [...prev, f];
     })();
-    localStorage.setItem('lb_feeds', JSON.stringify(next));
+    localStorage.setItem("lb_feeds", JSON.stringify(next));
     return next;
   }), []);
-
-  const saveSleep = useCallback((s) => setSleeps(prev => {
+  const saveSleep = useCallback((s) => setSleeps((prev) => {
     const next = (() => {
-      const idx = prev.findIndex(x => x.id === s.id);
-      if (idx >= 0) { const n = [...prev]; n[idx] = s; return n; }
+      const idx = prev.findIndex((x) => x.id === s.id);
+      if (idx >= 0) {
+        const n = [...prev];
+        n[idx] = s;
+        return n;
+      }
       return [...prev, s];
     })();
-    localStorage.setItem('lb_sleeps', JSON.stringify(next));
+    localStorage.setItem("lb_sleeps", JSON.stringify(next));
     return next;
   }), []);
-
-  if (!user) return <AuthScreen onAuth={handleAuth} />;
-  if (!babyProfile) return <OnboardingScreen onComplete={handleOnboardingComplete} />;
-
+  if (!user) return /* @__PURE__ */ React.createElement(AuthScreen, { onAuth: handleAuth });
+  if (!babyProfile) return /* @__PURE__ */ React.createElement(OnboardingScreen, { onComplete: handleOnboardingComplete });
   const tabs = [
-    { id: "schedule", icon: "📅", label: "Schedule" },
-    { id: "summary", icon: "📊", label: "Summary" },
-    { id: "settings", icon: "👤", label: "Account" },
+    { id: "schedule", icon: "\u{1F4C5}", label: "Schedule" },
+    { id: "summary", icon: "\u{1F4CA}", label: "Summary" },
+    { id: "settings", icon: "\u{1F464}", label: "Account" }
   ];
-
-  return (
-    <div style={{ minHeight: "100vh", background: PAL.bg, fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap');* { box-sizing: border-box; } body { margin: 0; } @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.25; } 50% { transform: scale(1.7); opacity: 0.08; } } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
-
-      {/* Header */}
-      <div style={{ background: PAL.card, borderBottom: `1px solid ${PAL.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 10 }}>
-        <span style={{ fontSize: 22 }}>🌙</span>
-        <span style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 20, color: PAL.text, fontWeight: 700 }}>LullaByte</span>
-        <span style={{ marginLeft: "auto", fontSize: 13, background: PAL.primary, color: "#fff", borderRadius: 20, padding: "3px 10px", fontWeight: 600 }}>Today</span>
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: "20px 16px 80px", maxWidth: 500, margin: "0 auto" }}>
-        {tab === "schedule" && (
-          <ScheduleTab
-            schedule={schedule}
-            scheduleSettings={scheduleSettings}
-            feeds={feeds}
-            sleeps={sleeps}
-            onUpdateSchedule={saveSchedule}
-            onSaveScheduleSettings={(s) => { localStorage.setItem('lb_settings', JSON.stringify(s)); setScheduleSettings(s); }}
-            onSaveFeed={saveFeed}
-            onSaveSleep={saveSleep}
-          />
-        )}
-        {tab === "summary" && <SummaryTab feeds={feeds} sleeps={sleeps} />}
-        {tab === "settings" && <SettingsTab user={user} onLogout={handleLogout} />}
-      </div>
-
-      {/* Bottom nav */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: PAL.card, borderTop: `1px solid ${PAL.border}`, display: "flex", justifyContent: "space-around", padding: "10px 0 16px", zIndex: 10 }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-            border: "none", background: "none", cursor: "pointer", fontFamily: "inherit",
-            color: tab === t.id ? PAL.primary : PAL.muted, flex: 1,
-          }}>
-            <span style={{ fontSize: 22 }}>{t.icon}</span>
-            <span style={{ fontSize: 11, fontWeight: tab === t.id ? 700 : 500 }}>{t.label}</span>
-            {tab === t.id && <div style={{ width: 20, height: 3, background: PAL.primary, borderRadius: 2 }} />}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, fontFamily: "'Figtree', 'Helvetica Neue', sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap');* { box-sizing: border-box; } body { margin: 0; } @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.25; } 50% { transform: scale(1.7); opacity: 0.08; } } @keyframes spin { to { transform: rotate(360deg); } }`), /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderBottom: `1px solid ${PAL.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 10 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 24 }), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 20, color: PAL.text, fontWeight: 700 } }, "Milk & Moon"), /* @__PURE__ */ React.createElement("span", { style: { marginLeft: "auto", fontSize: 13, background: PAL.primary, color: "#fff", borderRadius: 20, padding: "3px 10px", fontWeight: 600 } }, "Today")), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 16px 80px", maxWidth: 500, margin: "0 auto" } }, tab === "schedule" && /* @__PURE__ */ React.createElement(
+    ScheduleTab,
+    {
+      schedule,
+      scheduleSettings,
+      feeds,
+      sleeps,
+      onUpdateSchedule: saveSchedule,
+      onSaveScheduleSettings: (s) => {
+        localStorage.setItem("lb_settings", JSON.stringify(s));
+        setScheduleSettings(s);
+      },
+      onSaveFeed: saveFeed,
+      onSaveSleep: saveSleep
+    }
+  ), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps }), tab === "settings" && /* @__PURE__ */ React.createElement(SettingsTab, { user, onLogout: handleLogout })), /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: 0, right: 0, background: PAL.card, borderTop: `1px solid ${PAL.border}`, display: "flex", justifyContent: "space-around", padding: "10px 0 16px", zIndex: 10 } }, tabs.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, onClick: () => setTab(t.id), style: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 3,
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    color: tab === t.id ? PAL.primary : PAL.muted,
+    flex: 1
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, t.icon), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, fontWeight: tab === t.id ? 700 : 500 } }, t.label), tab === t.id && /* @__PURE__ */ React.createElement("div", { style: { width: 20, height: 3, background: PAL.primary, borderRadius: 2 } })))));
 }
 
 
-const domRoot = ReactDOM.createRoot(document.getElementById('root'));
+const domRoot = ReactDOM.createRoot(document.getElementById("root"));
 domRoot.render(React.createElement(App));
+
   </script>
 </body>
 </html>
