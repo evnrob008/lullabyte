@@ -1215,7 +1215,7 @@ Keep responses concise and friendly. Never use markdown headers or bullet asteri
     }
   ), /* @__PURE__ */ React.createElement("button", { onClick: handleSend, disabled: loading || !input.trim(), style: { width: 44, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #7C9E8A, #A8C4D4)", color: "#fff", fontSize: 18, cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 } }, "\u2191")));
 }
-function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep }) {
+function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep, babyProfile }) {
   var _a;
   const [showSettings, setShowSettings] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
@@ -1312,7 +1312,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     feed: { bg: PAL.feedLight, dot: PAL.feed, text: PAL.text },
     nightSleep: { bg: PAL.sleepLight, dot: "#7BA7C0", text: PAL.text }
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { paddingBottom: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("h2", { style: { margin: 0, fontFamily: "'Figtree', sans-serif", fontSize: 22, color: PAL.text } }, "Today's Schedule"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowSettings(true), style: { background: PAL.soft, border: "none", borderRadius: 10, padding: "8px 14px", color: PAL.primary, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u2699\uFE0F Settings")), scheduleSettings && (() => {
+  return /* @__PURE__ */ React.createElement("div", { style: { paddingBottom: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("h2", { style: { margin: 0, fontFamily: "'Figtree', sans-serif", fontSize: 22, color: PAL.text } }, (babyProfile == null ? void 0 : babyProfile.name) ? `${babyProfile.name}'s Schedule` : "Today's Schedule"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowSettings(true), style: { background: PAL.soft, border: "none", borderRadius: 10, padding: "8px 14px", color: PAL.primary, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u2699\uFE0F Settings")), scheduleSettings && (() => {
     const now2 = /* @__PURE__ */ new Date();
     const midnight = new Date(now2);
     midnight.setHours(0, 0, 0, 0);
@@ -1821,6 +1821,7 @@ function App() {
       scheduleSettings,
       feeds,
       sleeps,
+      babyProfile,
       onUpdateSchedule: saveSchedule,
       onSaveScheduleSettings: (s) => {
         localStorage.setItem("lb_settings", JSON.stringify(s));
