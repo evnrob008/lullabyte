@@ -145,15 +145,18 @@ const DEFAULT_SETTINGS = {
 const getDB = () => window.firestoreDB || null;
 const fsSet = async (uid, collection, data) => {
   try {
-    const key = `lb_${collection}_${uid || "default"}`;
     const str = JSON.stringify(data);
-    localStorage.setItem(key, str);
+    localStorage.setItem(`lb_${collection}_${uid || "default"}`, str);
     localStorage.setItem(`lb_${collection}`, str);
     const db = getDB();
     if (!db || !uid || uid === "default") return;
-    await db.collection("users").doc(uid).collection(collection).doc("data").set(
-      { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
-    );
+    const ownerUid = localStorage.getItem("lb_data_uid");
+    const writeUid = ownerUid || uid;
+    const payload = { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+    await db.collection("users").doc(writeUid).collection(collection).doc("data").set(payload);
+    if (ownerUid && ownerUid !== uid) {
+      await db.collection("users").doc(uid).collection(collection).doc("data").set(__spreadProps(__spreadValues({}, payload), { mirroredFrom: ownerUid }));
+    }
   } catch (e) {
     console.warn("Firestore write failed:", e.message);
   }
@@ -163,7 +166,8 @@ const fsGet = async (uid, collection) => {
     const db = getDB();
     if (db && uid && uid !== "default") {
       try {
-        const doc = await db.collection("users").doc(uid).collection(collection).doc("data").get();
+        const myUid = JSON.parse(localStorage.getItem("lb_user") || "{}").uid || uid;
+        const doc = await db.collection("users").doc(myUid).collection(collection).doc("data").get();
         if (doc.exists) {
           const data = JSON.parse(doc.data().value);
           localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(data));
@@ -187,9 +191,13 @@ const fsSetArray = async (uid, collection, arr) => {
     localStorage.setItem(`lb_${collection}`, str);
     const db = getDB();
     if (!db || !uid || uid === "default") return;
-    await db.collection("users").doc(uid).collection(collection).doc("data").set(
-      { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
-    );
+    const ownerUid = localStorage.getItem("lb_data_uid");
+    const writeUid = ownerUid || uid;
+    const payload = { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+    await db.collection("users").doc(writeUid).collection(collection).doc("data").set(payload);
+    if (ownerUid && ownerUid !== uid) {
+      await db.collection("users").doc(uid).collection(collection).doc("data").set(__spreadProps(__spreadValues({}, payload), { mirroredFrom: ownerUid }));
+    }
   } catch (e) {
     console.warn("Firestore array write failed:", e.message);
   }
@@ -917,8 +925,14 @@ function InviteModal({ onClose, user, initialCode, onRedeemed }) {
               const val = doc.data().value;
               localStorage.setItem(`lb_${col}_${uid}`, val);
               localStorage.setItem(`lb_${col}`, val);
+              await db.collection("users").doc(uid).collection(col).doc("data").set({
+                value: val,
+                mirroredFrom: ownerUid,
+                updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+              });
             }
           } catch (e) {
+            console.warn("Could not copy data for", col, e);
           }
         }));
       }
@@ -1811,7 +1825,6 @@ function App() {
       fsGet(dataUid, "sleeps")
     ]);
     if (dataUid !== uid) localStorage.setItem("lb_data_uid", dataUid);
-    else localStorage.removeItem("lb_data_uid");
     if (baby) setBabyProfile(baby);
     if (settings) {
       setScheduleSettings(settings);
