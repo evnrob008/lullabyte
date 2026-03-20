@@ -1313,6 +1313,22 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       }
       return sum;
     }, 0);
+    const allTodayFeeds = feeds.filter((f) => {
+      const d = strToDate(f.time);
+      return d >= midnight && d <= now2;
+    });
+    const lastFeed = allTodayFeeds.sort((a, b) => strToDate(b.time) - strToDate(a.time))[0];
+    let lastFeedLabel = "", lastFeedValue = "";
+    if (lastFeed) {
+      const minsSince = Math.floor(diffMins(strToDate(lastFeed.time), now2));
+      const h = Math.floor(minsSince / 60);
+      const m = minsSince % 60;
+      lastFeedLabel = "Last feed";
+      lastFeedValue = h > 0 ? `${h}h ${m}m ago` : `${m}m ago`;
+    } else {
+      lastFeedLabel = "Last feed";
+      lastFeedValue = "None today";
+    }
     const napEvents = schedule.filter((e) => e.type === "nap");
     let napStatusLabel = "", napStatusValue = "";
     const currentScheduledNap = napEvents.find((e) => {
@@ -1349,6 +1365,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20, overflowX: "auto", paddingBottom: 4 } }, [
       { label: "Total Naps", value: totalNapMins > 0 ? durationLabel(totalNapMins) : "0m", icon: "\u{1F4A4}" },
       { label: "Total Feed", value: totalFeedMl > 0 ? `${totalFeedMl}ml` : "0ml", icon: "\u{1F37C}" },
+      { label: lastFeedLabel, value: lastFeedValue, icon: "\u{1F550}" },
       { label: napStatusLabel, value: napStatusValue, icon: activeSleep || currentScheduledNap ? "\u{1F634}" : "\u23F0" }
     ].map((s) => /* @__PURE__ */ React.createElement("div", { key: s.label, style: { flex: 1, minWidth: 90, background: PAL.card, borderRadius: 14, padding: "12px 10px", textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18 } }, s.icon), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: PAL.text, marginTop: 4 } }, s.value), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: PAL.muted } }, s.label))));
   })(), activeSleep ? /* @__PURE__ */ React.createElement(
