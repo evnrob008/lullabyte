@@ -16,6 +16,7 @@
   <!-- Firebase compat (works locally and on Vercel) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBNvAEtHRHp1MH5c8kmi6a7dk-lGnTu9xM",
@@ -36,8 +37,9 @@
       GoogleAuthProvider: firebase.auth.GoogleAuthProvider,
       OAuthProvider: firebase.auth.OAuthProvider,
     };
+    window.firestoreDB = firebase.firestore();
     window.firebaseReady = Promise.resolve(_auth);
-    console.log("✅ Firebase Auth ready (compat)");
+    console.log("✅ Firebase Auth + Firestore ready (compat)");
   </script>
 </head>
 <body>
@@ -133,6 +135,52 @@ const DEFAULT_SETTINGS = {
   bedtimeToleranceMins: 60,
   bridgingNapMins: 20
 };
+const getDB = () => window.firestoreDB || null;
+const fsSet = async (uid, collection, data) => {
+  const key = `lb_${collection}_${uid}`;
+  localStorage.setItem(key, JSON.stringify(data));
+  localStorage.setItem(`lb_${collection}`, JSON.stringify(data));
+  const db = getDB();
+  if (!db || !uid) return;
+  try {
+    await db.collection("users").doc(uid).collection(collection).doc("data").set(
+      { value: JSON.stringify(data), updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+    );
+  } catch (e) {
+    console.warn("Firestore write failed (offline?):", e.message);
+  }
+};
+const fsGet = async (uid, collection) => {
+  const db = getDB();
+  if (db && uid) {
+    try {
+      const doc = await db.collection("users").doc(uid).collection(collection).doc("data").get();
+      if (doc.exists) {
+        const data = JSON.parse(doc.data().value);
+        localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(data));
+        localStorage.setItem(`lb_${collection}`, JSON.stringify(data));
+        return data;
+      }
+    } catch (e) {
+      console.warn("Firestore read failed (offline?):", e.message);
+    }
+  }
+  const local = localStorage.getItem(`lb_${collection}_${uid}`) || localStorage.getItem(`lb_${collection}`);
+  return local ? JSON.parse(local) : null;
+};
+const fsSetArray = async (uid, collection, arr) => {
+  localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(arr));
+  localStorage.setItem(`lb_${collection}`, JSON.stringify(arr));
+  const db = getDB();
+  if (!db || !uid) return;
+  try {
+    await db.collection("users").doc(uid).collection(collection).doc("data").set(
+      { value: JSON.stringify(arr), updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+    );
+  } catch (e) {
+    console.warn("Firestore write failed:", e.message);
+  }
+};
 function OnboardingScreen({ onComplete }) {
   const [step, setStep] = useState(0);
   const [babyName, setBabyName] = useState("");
@@ -190,7 +238,14 @@ function OnboardingScreen({ onComplete }) {
     marginTop: 8
   };
   const step0Valid = babyName.trim() && gender && ageMonths !== "";
-  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 400 } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 32 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 64 }), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 28, color: PAL.text, margin: 0 } }, "Welcome to Milk & Moon"), /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, marginTop: 6, fontSize: 14 } }, step === 0 ? "Tell us about your baby" : "Set your default schedule")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, marginBottom: 28 } }, [0, 1].map((n) => /* @__PURE__ */ React.createElement("div", { key: n, style: { width: n === step ? 24 : 8, height: 8, borderRadius: 4, background: n === step ? PAL.primary : PAL.border, transition: "all 0.2s" } }))), /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: 20, padding: 28, boxShadow: "0 4px 32px rgba(0,0,0,0.06)" } }, step === 0 ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 4 } }, "Baby's name"), /* @__PURE__ */ React.createElement("input", { style: inp, placeholder: "e.g. Olivia", value: babyName, onChange: (e) => setBabyName(e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 8 } }, "Gender"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, [["girl", "\u{1F467} Girl"], ["boy", "\u{1F466} Boy"], ["other", "\u{1F31F} Other"]].map(([val, label]) => /* @__PURE__ */ React.createElement("button", { key: val, onClick: () => setGender(val), style: {
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { width: "100%", maxWidth: 400 } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginBottom: 32 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 64 }), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 28, color: PAL.text, margin: 0 } }, "Welcome to Milk & Moon"), /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, marginTop: 6, fontSize: 14 } }, step === 0 ? "Tell us about your baby" : "Set your default schedule"), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => onComplete({ name: "Baby", gender: "other", ageMonths: 0 }, __spreadValues({}, DEFAULT_SETTINGS)),
+      style: { marginTop: 8, background: "none", border: "none", color: PAL.muted, fontSize: 13, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }
+    },
+    "Skip for now"
+  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, marginBottom: 28 } }, [0, 1].map((n) => /* @__PURE__ */ React.createElement("div", { key: n, style: { width: n === step ? 24 : 8, height: 8, borderRadius: 4, background: n === step ? PAL.primary : PAL.border, transition: "all 0.2s" } }))), /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: 20, padding: 28, boxShadow: "0 4px 32px rgba(0,0,0,0.06)" } }, step === 0 ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 4 } }, "Baby's name"), /* @__PURE__ */ React.createElement("input", { style: inp, placeholder: "e.g. Olivia", value: babyName, onChange: (e) => setBabyName(e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted, display: "block", marginBottom: 8 } }, "Gender"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, [["girl", "\u{1F467} Girl"], ["boy", "\u{1F466} Boy"], ["other", "\u{1F31F} Other"]].map(([val, label]) => /* @__PURE__ */ React.createElement("button", { key: val, onClick: () => setGender(val), style: {
     flex: 1,
     padding: "10px 4px",
     borderRadius: 10,
@@ -1248,7 +1303,8 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : 700, fontSize: 14, color: PAL.text } }, ev.label), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, fmt12(new Date(ev.start))), isScheduled && ev.editable && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), ev.type === "nap" && ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(ev.end)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))), ev.type === "wake" && nextEv && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(nextEv.start)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(nextEv.start))))))
     )));
   })), showSettings && /* @__PURE__ */ React.createElement(ScheduleSettingsModal, { settings: scheduleSettings, onSave: (s) => {
-    localStorage.setItem("lb_settings", JSON.stringify(s));
+    const _u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    fsSet(_u.uid || _u.email || "default", "settings", s);
     onSaveScheduleSettings(s);
     onUpdateSchedule(generateSchedule(s));
   }, onClose: () => setShowSettings(false) }), showNapModal && /* @__PURE__ */ React.createElement(
@@ -1432,56 +1488,50 @@ function App() {
     }
     return [];
   });
-  const handleAuth = useCallback((u) => {
+  const handleAuth = useCallback(async (u) => {
     localStorage.setItem("lb_user", JSON.stringify(u));
-    const key = u.uid || u.email || "default";
-    const baby = localStorage.getItem("lb_baby_" + key) || localStorage.getItem("lb_baby");
-    const settings = localStorage.getItem("lb_settings_" + key) || localStorage.getItem("lb_settings");
-    const schedule2 = localStorage.getItem("lb_schedule_" + key) || localStorage.getItem("lb_schedule");
-    const feeds2 = localStorage.getItem("lb_feeds_" + key) || localStorage.getItem("lb_feeds");
-    const sleeps2 = localStorage.getItem("lb_sleeps_" + key) || localStorage.getItem("lb_sleeps");
-    if (baby) setBabyProfile(JSON.parse(baby));
+    const uid = u.uid || u.email || "default";
+    setUser(u);
+    const [baby, settings, schedule2, feeds2, sleeps2] = await Promise.all([
+      fsGet(uid, "baby"),
+      fsGet(uid, "settings"),
+      fsGet(uid, "schedule"),
+      fsGet(uid, "feeds"),
+      fsGet(uid, "sleeps")
+    ]);
+    if (baby) setBabyProfile(baby);
     if (settings) {
-      const s = JSON.parse(settings);
-      setScheduleSettings(s);
+      setScheduleSettings(settings);
       if (schedule2) {
-        const parsed = JSON.parse(schedule2);
-        setSchedule(parsed.map((e) => __spreadProps(__spreadValues({}, e), { start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null })));
+        setSchedule(schedule2.map((e) => __spreadProps(__spreadValues({}, e), { start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null })));
       } else {
-        setSchedule(generateSchedule(s));
+        setSchedule(generateSchedule(settings));
       }
     }
-    if (feeds2) setFeeds(JSON.parse(feeds2));
-    if (sleeps2) setSleeps(JSON.parse(sleeps2));
-    setUser(u);
+    if (feeds2) setFeeds(feeds2);
+    if (sleeps2) setSleeps(sleeps2);
   }, []);
   const handleLogout = useCallback(() => {
     localStorage.removeItem("lb_user");
     setUser(null);
   }, []);
-  const handleOnboardingComplete = useCallback((baby, settings) => {
+  const handleOnboardingComplete = useCallback(async (baby, settings) => {
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
-    const key = u.uid || u.email || "default";
-    const babyStr = JSON.stringify(baby);
-    const settingsStr = JSON.stringify(settings);
-    localStorage.setItem("lb_baby", babyStr);
-    localStorage.setItem("lb_baby_" + key, babyStr);
-    localStorage.setItem("lb_settings", settingsStr);
-    localStorage.setItem("lb_settings_" + key, settingsStr);
+    const uid = u.uid || u.email || "default";
+    const newSchedule = generateSchedule(settings);
+    await Promise.all([
+      fsSet(uid, "baby", baby),
+      fsSet(uid, "settings", settings),
+      fsSet(uid, "schedule", newSchedule)
+    ]);
     setBabyProfile(baby);
     setScheduleSettings(settings);
-    const newSchedule = generateSchedule(settings);
-    const scheduleStr = JSON.stringify(newSchedule);
-    localStorage.setItem("lb_schedule", scheduleStr);
-    localStorage.setItem("lb_schedule_" + key, scheduleStr);
     setSchedule(newSchedule);
   }, []);
   const saveSchedule = useCallback((sched) => {
-    const str = JSON.stringify(sched);
-    localStorage.setItem("lb_schedule", str);
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
-    const key = u.uid || u.email || "default";
-    localStorage.setItem("lb_schedule_" + key, str);
+    const uid = u.uid || u.email || "default";
+    fsSet(uid, "schedule", sched);
     setSchedule(sched);
   }, []);
   const saveFeed = useCallback((f) => setFeeds((prev) => {
@@ -1494,10 +1544,8 @@ function App() {
       }
       return [...prev, f];
     })();
-    const str = JSON.stringify(next);
-    localStorage.setItem("lb_feeds", str);
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
-    localStorage.setItem("lb_feeds_" + (u.uid || u.email || "default"), str);
+    fsSetArray(u.uid || u.email || "default", "feeds", next);
     return next;
   }), []);
   const saveSleep = useCallback((s) => setSleeps((prev) => {
@@ -1510,10 +1558,8 @@ function App() {
       }
       return [...prev, s];
     })();
-    const str = JSON.stringify(next);
-    localStorage.setItem("lb_sleeps", str);
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
-    localStorage.setItem("lb_sleeps_" + (u.uid || u.email || "default"), str);
+    fsSetArray(u.uid || u.email || "default", "sleeps", next);
     return next;
   }), []);
   if (!user) return /* @__PURE__ */ React.createElement(AuthScreen, { onAuth: handleAuth });
