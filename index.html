@@ -1452,20 +1452,21 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
           return t >= wwStart && t < wwEnd;
         });
         if (!feedsInWindow.length) return null;
-        return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 } }, feedsInWindow.map((f) => {
+        return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginTop: 8 } }, feedsInWindow.map((f) => {
           const vol = parseFloat(f.consumed || f.offered || 0);
           const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
-          return /* @__PURE__ */ React.createElement("div", { key: f.id, style: {
+          return /* @__PURE__ */ React.createElement("div", { key: f.id, onClick: () => setEditFeed(f), style: {
             display: "flex",
             alignItems: "center",
-            gap: 5,
+            justifyContent: "space-between",
             background: PAL.feedLight,
-            borderRadius: 20,
-            padding: "4px 10px",
+            borderRadius: 10,
+            padding: "6px 10px",
             fontSize: 12,
             color: PAL.feed,
-            fontWeight: 600
-          } }, "\u{1F37C} ", ml, "ml", /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, "\xB7 ", fmt12(strToDate(f.time))));
+            fontWeight: 600,
+            cursor: "pointer"
+          } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F37C} ", ml, "ml"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, fmt12(strToDate(f.time))), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")));
         }));
       })()))
     )));
