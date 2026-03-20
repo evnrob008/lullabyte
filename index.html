@@ -249,7 +249,7 @@ function AuthScreen({ onAuth }) {
     try {
       const auth = await getFirebase();
       if (!auth) {
-        setError("Could not connect to auth service: " + (window.firebaseInitError || "Firebase failed to load. Ensure pop-ups are allowed and try again."));
+        setError("Could not connect to auth service. Please try again.");
         setLoading(false);
         return;
       }
@@ -269,7 +269,7 @@ function AuthScreen({ onAuth }) {
     try {
       const auth = await getFirebase();
       if (!auth) {
-        setError("Could not connect to auth service: " + (window.firebaseInitError || "Firebase failed to load. Ensure pop-ups are allowed and try again."));
+        setError("Could not connect to auth service. Please try again.");
         setLoading(false);
         return;
       }
@@ -1361,9 +1361,6 @@ function SettingsTab({ user, onLogout }) {
   } }), /* @__PURE__ */ React.createElement(Row, { icon: "\u{1F6AA}", label: "Sign Out", danger: true, onClick: onLogout }), showInvite && /* @__PURE__ */ React.createElement(InviteModal, { onClose: () => setShowInvite(false), user }));
 }
 function App() {
-  useEffect(() => {
-    ["lb_user", "lb_baby", "lb_settings", "lb_schedule", "lb_feeds", "lb_sleeps"].forEach((k) => localStorage.removeItem(k));
-  }, []);
   const [user, setUser] = useState(() => {
     try {
       const u = localStorage.getItem("lb_user");
@@ -1424,6 +1421,25 @@ function App() {
   });
   const handleAuth = useCallback((u) => {
     localStorage.setItem("lb_user", JSON.stringify(u));
+    const key = u.uid || u.email || "default";
+    const baby = localStorage.getItem("lb_baby_" + key) || localStorage.getItem("lb_baby");
+    const settings = localStorage.getItem("lb_settings_" + key) || localStorage.getItem("lb_settings");
+    const schedule2 = localStorage.getItem("lb_schedule_" + key) || localStorage.getItem("lb_schedule");
+    const feeds2 = localStorage.getItem("lb_feeds_" + key) || localStorage.getItem("lb_feeds");
+    const sleeps2 = localStorage.getItem("lb_sleeps_" + key) || localStorage.getItem("lb_sleeps");
+    if (baby) setBabyProfile(JSON.parse(baby));
+    if (settings) {
+      const s = JSON.parse(settings);
+      setScheduleSettings(s);
+      if (schedule2) {
+        const parsed = JSON.parse(schedule2);
+        setSchedule(parsed.map((e) => __spreadProps(__spreadValues({}, e), { start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null })));
+      } else {
+        setSchedule(generateSchedule(s));
+      }
+    }
+    if (feeds2) setFeeds(JSON.parse(feeds2));
+    if (sleeps2) setSleeps(JSON.parse(sleeps2));
     setUser(u);
   }, []);
   const handleLogout = useCallback(() => {
@@ -1431,16 +1447,28 @@ function App() {
     setUser(null);
   }, []);
   const handleOnboardingComplete = useCallback((baby, settings) => {
-    localStorage.setItem("lb_baby", JSON.stringify(baby));
-    localStorage.setItem("lb_settings", JSON.stringify(settings));
+    const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    const key = u.uid || u.email || "default";
+    const babyStr = JSON.stringify(baby);
+    const settingsStr = JSON.stringify(settings);
+    localStorage.setItem("lb_baby", babyStr);
+    localStorage.setItem("lb_baby_" + key, babyStr);
+    localStorage.setItem("lb_settings", settingsStr);
+    localStorage.setItem("lb_settings_" + key, settingsStr);
     setBabyProfile(baby);
     setScheduleSettings(settings);
     const newSchedule = generateSchedule(settings);
-    localStorage.setItem("lb_schedule", JSON.stringify(newSchedule));
+    const scheduleStr = JSON.stringify(newSchedule);
+    localStorage.setItem("lb_schedule", scheduleStr);
+    localStorage.setItem("lb_schedule_" + key, scheduleStr);
     setSchedule(newSchedule);
   }, []);
   const saveSchedule = useCallback((sched) => {
-    localStorage.setItem("lb_schedule", JSON.stringify(sched));
+    const str = JSON.stringify(sched);
+    localStorage.setItem("lb_schedule", str);
+    const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    const key = u.uid || u.email || "default";
+    localStorage.setItem("lb_schedule_" + key, str);
     setSchedule(sched);
   }, []);
   const saveFeed = useCallback((f) => setFeeds((prev) => {
@@ -1453,7 +1481,10 @@ function App() {
       }
       return [...prev, f];
     })();
-    localStorage.setItem("lb_feeds", JSON.stringify(next));
+    const str = JSON.stringify(next);
+    localStorage.setItem("lb_feeds", str);
+    const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    localStorage.setItem("lb_feeds_" + (u.uid || u.email || "default"), str);
     return next;
   }), []);
   const saveSleep = useCallback((s) => setSleeps((prev) => {
@@ -1466,7 +1497,10 @@ function App() {
       }
       return [...prev, s];
     })();
-    localStorage.setItem("lb_sleeps", JSON.stringify(next));
+    const str = JSON.stringify(next);
+    localStorage.setItem("lb_sleeps", str);
+    const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    localStorage.setItem("lb_sleeps_" + (u.uid || u.email || "default"), str);
     return next;
   }), []);
   if (!user) return /* @__PURE__ */ React.createElement(AuthScreen, { onAuth: handleAuth });
