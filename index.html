@@ -1800,6 +1800,12 @@ function App() {
     if (sleeps2) setSleeps(sleeps2);
     setAuthLoading(false);
   }, []);
+  const handleUpdateBabyProfile = useCallback(async (updated) => {
+    setBabyProfile(updated);
+    const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    const uid = localStorage.getItem("lb_data_uid") || u.uid || u.email || "default";
+    await fsSet(uid, "baby", updated);
+  }, []);
   const handleLogout = useCallback(async () => {
     localStorage.removeItem("lb_user");
     try {
@@ -1887,7 +1893,17 @@ function App() {
       onSaveFeed: saveFeed,
       onSaveSleep: saveSleep
     }
-  ), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps }), tab === "settings" && /* @__PURE__ */ React.createElement(SettingsTab, { user, onLogout: handleLogout })), /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: 0, right: 0, background: PAL.card, borderTop: `1px solid ${PAL.border}`, display: "flex", justifyContent: "space-around", padding: "10px 0 16px", zIndex: 10 } }, tabs.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, onClick: () => setTab(t.id), style: {
+  ), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps }), tab === "settings" && /* @__PURE__ */ React.createElement(
+    SettingsTab,
+    {
+      user,
+      onLogout: handleLogout,
+      babyProfile,
+      onUpdateBabyProfile: handleUpdateBabyProfile,
+      pendingInviteCode,
+      onInviteRedeemed: () => setPendingInviteCode(null)
+    }
+  )), /* @__PURE__ */ React.createElement("div", { style: { position: "fixed", bottom: 0, left: 0, right: 0, background: PAL.card, borderTop: `1px solid ${PAL.border}`, display: "flex", justifyContent: "space-around", padding: "10px 0 16px", zIndex: 10 } }, tabs.map((t) => /* @__PURE__ */ React.createElement("button", { key: t.id, onClick: () => setTab(t.id), style: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
