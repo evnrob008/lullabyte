@@ -1555,8 +1555,19 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       scheduleSettings,
       activeSleep,
       onStartTimer: () => {
-        setActiveSleep({ start: /* @__PURE__ */ new Date() });
+        const napStart = /* @__PURE__ */ new Date();
+        setActiveSleep({ start: napStart });
         setShowNapModal(false);
+        const nextNapIdx = schedule.findIndex(
+          (ev) => ev.type === "nap" && !ev._recorded && new Date(ev.start) > new Date(napStart.getTime() - 60 * 60 * 1e3)
+        );
+        if (nextNapIdx >= 0) {
+          const dur = diffMins(new Date(schedule[nextNapIdx].start), new Date(schedule[nextNapIdx].end));
+          const updated = schedule.map(
+            (ev, i) => i === nextNapIdx ? __spreadProps(__spreadValues({}, ev), { start: napStart, end: addMins(napStart, dur) }) : ev
+          );
+          onUpdateSchedule(rebuildFromIndex(updated, nextNapIdx, scheduleSettings));
+        }
       },
       onSaveNap: (napStart, napEnd, linkedToId) => {
         const napId = Date.now();
