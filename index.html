@@ -719,6 +719,7 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onClose })
     boxSizing: "border-box"
   };
   const save = () => {
+    var _a, _b, _c, _d;
     const newStart = strToDate(startTime, new Date(event.start));
     let newEnd = endTime ? strToDate(endTime, new Date(event.start)) : null;
     if (newEnd && newEnd < newStart) newEnd.setDate(newEnd.getDate() + 1);
@@ -751,8 +752,28 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onClose })
       onSave(generateSchedule(newSettings));
       onClose();
       return;
+    } else if (event.type === "wake") {
+      updated[idx] = __spreadProps(__spreadValues({}, updated[idx]), { start: newStart });
+      const prevNapIdx = (_b = (_a = updated.slice(0, idx).map((e, i) => ({ e, i })).reverse().find(({ e }) => e.type === "nap")) == null ? void 0 : _a.i) != null ? _b : -1;
+      if (prevNapIdx >= 0) {
+        updated[prevNapIdx] = __spreadProps(__spreadValues({}, updated[prevNapIdx]), { end: newStart });
+        const result = rebuildFromIndex(updated, prevNapIdx, scheduleSettings);
+        onSave(result);
+      } else {
+        const result = rebuildFromIndex(updated, idx, scheduleSettings);
+        onSave(result);
+      }
+      onClose();
+      return;
     } else {
       updated[idx] = __spreadProps(__spreadValues({}, updated[idx]), { start: newStart, end: newEnd || updated[idx].end });
+      const lastNapIdx = (_d = (_c = updated.slice(0, idx).map((e, i) => ({ e, i })).reverse().find(({ e }) => e.type === "nap")) == null ? void 0 : _c.i) != null ? _d : -1;
+      if (lastNapIdx >= 0) {
+        const result = rebuildFromIndex(updated, lastNapIdx, scheduleSettings);
+        onSave(result);
+        onClose();
+        return;
+      }
     }
     onSave(updated);
     onClose();
@@ -1472,7 +1493,11 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         },
         onClick: () => isScheduled && ev.editable && setEditEvent(ev)
       },
-      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : 700, fontSize: 14, color: PAL.text } }, ev.label), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, fmt12(new Date(ev.start))), isScheduled && ev.editable && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), ev.type === "nap" && ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(ev.end)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))), ev.type === "wake" && ev.id !== "wake-0" && (() => {
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : 700, fontSize: 14, color: PAL.text } }, ev.label), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, ev.type === "wake" && ev.id !== "wake-0" ? (() => {
+        const prevEv = allTimelineItems[i - 1];
+        const actualStart = (prevEv == null ? void 0 : prevEv.end) ? new Date(prevEv.end) : (prevEv == null ? void 0 : prevEv.start) ? new Date(prevEv.start) : new Date(ev.start);
+        return fmt12(actualStart);
+      })() : fmt12(new Date(ev.start))), isScheduled && ev.editable && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), ev.type === "nap" && ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(ev.end)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))), ev.type === "wake" && ev.id !== "wake-0" && (() => {
         const nextNapEv = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap");
         if (!nextNapEv) return null;
         return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(nextNapEv.start)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(nextNapEv.start))));
