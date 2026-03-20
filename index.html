@@ -137,48 +137,54 @@ const DEFAULT_SETTINGS = {
 };
 const getDB = () => window.firestoreDB || null;
 const fsSet = async (uid, collection, data) => {
-  const key = `lb_${collection}_${uid}`;
-  localStorage.setItem(key, JSON.stringify(data));
-  localStorage.setItem(`lb_${collection}`, JSON.stringify(data));
-  const db = getDB();
-  if (!db || !uid) return;
   try {
+    const key = `lb_${collection}_${uid || "default"}`;
+    const str = JSON.stringify(data);
+    localStorage.setItem(key, str);
+    localStorage.setItem(`lb_${collection}`, str);
+    const db = getDB();
+    if (!db || !uid || uid === "default") return;
     await db.collection("users").doc(uid).collection(collection).doc("data").set(
-      { value: JSON.stringify(data), updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
-    );
-  } catch (e) {
-    console.warn("Firestore write failed (offline?):", e.message);
-  }
-};
-const fsGet = async (uid, collection) => {
-  const db = getDB();
-  if (db && uid) {
-    try {
-      const doc = await db.collection("users").doc(uid).collection(collection).doc("data").get();
-      if (doc.exists) {
-        const data = JSON.parse(doc.data().value);
-        localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(data));
-        localStorage.setItem(`lb_${collection}`, JSON.stringify(data));
-        return data;
-      }
-    } catch (e) {
-      console.warn("Firestore read failed (offline?):", e.message);
-    }
-  }
-  const local = localStorage.getItem(`lb_${collection}_${uid}`) || localStorage.getItem(`lb_${collection}`);
-  return local ? JSON.parse(local) : null;
-};
-const fsSetArray = async (uid, collection, arr) => {
-  localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(arr));
-  localStorage.setItem(`lb_${collection}`, JSON.stringify(arr));
-  const db = getDB();
-  if (!db || !uid) return;
-  try {
-    await db.collection("users").doc(uid).collection(collection).doc("data").set(
-      { value: JSON.stringify(arr), updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+      { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
     );
   } catch (e) {
     console.warn("Firestore write failed:", e.message);
+  }
+};
+const fsGet = async (uid, collection) => {
+  try {
+    const db = getDB();
+    if (db && uid && uid !== "default") {
+      try {
+        const doc = await db.collection("users").doc(uid).collection(collection).doc("data").get();
+        if (doc.exists) {
+          const data = JSON.parse(doc.data().value);
+          localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(data));
+          localStorage.setItem(`lb_${collection}`, JSON.stringify(data));
+          return data;
+        }
+      } catch (e) {
+        console.warn("Firestore read failed:", e.message);
+      }
+    }
+    const local = localStorage.getItem(`lb_${collection}_${uid}`) || localStorage.getItem(`lb_${collection}`);
+    return local ? JSON.parse(local) : null;
+  } catch (e) {
+    return null;
+  }
+};
+const fsSetArray = async (uid, collection, arr) => {
+  try {
+    const str = JSON.stringify(arr);
+    localStorage.setItem(`lb_${collection}_${uid || "default"}`, str);
+    localStorage.setItem(`lb_${collection}`, str);
+    const db = getDB();
+    if (!db || !uid || uid === "default") return;
+    await db.collection("users").doc(uid).collection(collection).doc("data").set(
+      { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+    );
+  } catch (e) {
+    console.warn("Firestore array write failed:", e.message);
   }
 };
 function OnboardingScreen({ onComplete }) {
