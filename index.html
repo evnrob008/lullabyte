@@ -1060,15 +1060,15 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [showNightSleep, setShowNightSleep] = useState(false);
   const [showAI, setShowAI] = useState(false);
+  const [editFeed, setEditFeed] = useState(null);
+  const [editSleep, setEditSleep] = useState(null);
+  const [activeSleep, setActiveSleep] = useState(null);
   const [now, setNow] = useState(/* @__PURE__ */ new Date());
   useEffect(() => {
     const interval = activeSleep ? 1e3 : 3e4;
     const t = setInterval(() => setNow(/* @__PURE__ */ new Date()), interval);
     return () => clearInterval(t);
   }, [!!activeSleep]);
-  const [editFeed, setEditFeed] = useState(null);
-  const [editSleep, setEditSleep] = useState(null);
-  const [activeSleep, setActiveSleep] = useState(null);
   const [showNapModal, setShowNapModal] = useState(false);
   const todayFeeds = feeds.filter((f) => {
     const d = strToDate(f.time);
