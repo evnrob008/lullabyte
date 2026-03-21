@@ -1082,6 +1082,30 @@ function Overlay({ children, onClose }) {
     /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 36, height: 4, background: PAL.border, borderRadius: 2, margin: "0 auto 20px" } }), children)
   );
 }
+function NapBanner({ activeSleep, elapsed, onTap }) {
+  const [now, setNow] = useState(/* @__PURE__ */ new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(/* @__PURE__ */ new Date()), 1e3);
+    return () => clearInterval(t);
+  }, []);
+  const napSecs = Math.floor((now - new Date(activeSleep.start)) / 1e3);
+  const h = Math.floor(napSecs / 3600);
+  const m = Math.floor(napSecs % 3600 / 60);
+  const s = napSecs % 60;
+  const display = h > 0 ? `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s` : `${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+  return /* @__PURE__ */ React.createElement("div", { onClick: onTap, style: {
+    background: "#1a2a4a",
+    color: "#fff",
+    padding: "10px 20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    cursor: "pointer",
+    position: "sticky",
+    top: 53,
+    zIndex: 9
+  } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 8, height: 8, borderRadius: "50%", background: "#4A90D9", animation: "pulse 2s infinite" } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, fontWeight: 600 } }, "\u{1F634} Nap in progress"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "rgba(255,255,255,0.6)" } }, "Started ", fmt12(new Date(activeSleep.start)))), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, fontWeight: 700, fontFamily: "monospace", letterSpacing: 1 } }, display));
+}
 function FeedChip({ f, onEdit }) {
   const toMl = (v) => {
     const n = parseFloat(v || 0);
@@ -1306,7 +1330,7 @@ Keep responses concise and friendly. Never use markdown headers or bullet asteri
     }
   ), /* @__PURE__ */ React.createElement("button", { onClick: handleSend, disabled: loading || !input.trim(), style: { width: 44, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #7C9E8A, #A8C4D4)", color: "#fff", fontSize: 18, cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 } }, "\u2191")));
 }
-function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep, babyProfile }) {
+function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep, babyProfile, activeSleep, onSetActiveSleep }) {
   var _a;
   const [showSettings, setShowSettings] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
@@ -1315,7 +1339,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   const [showAI, setShowAI] = useState(false);
   const [editFeed, setEditFeed] = useState(null);
   const [editSleep, setEditSleep] = useState(null);
-  const [activeSleep, setActiveSleep] = useState(null);
+  const setActiveSleep = onSetActiveSleep;
   const [now, setNow] = useState(/* @__PURE__ */ new Date());
   useEffect(() => {
     const interval = activeSleep ? 1e3 : 3e4;
@@ -1401,8 +1425,27 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         end: chain[chain.length - 1].end ? new Date(chain[chain.length - 1].end) : null,
         parts: chain
       };
-    })
+    }),
     // feeds are rendered inside wake window tiles, not as separate timeline items
+    // BUT feeds outside wake windows (before wakeup or after bedtime) appear as standalone items
+    ...bottleFeeds.filter((f) => {
+      const t = strToDate(f.time);
+      const inAnyWakeWindow = schedule.some((ev, idx) => {
+        if (ev.type !== "wake") return false;
+        const wwStart = ev.id === "wake-0" ? new Date(ev.start) : (() => {
+          const prev = schedule[idx - 1];
+          return (prev == null ? void 0 : prev.end) ? new Date(prev.end) : new Date(ev.start);
+        })();
+        const nextNap = schedule.slice(idx + 1).find((e) => e.type === "nap" || e.type === "sleep");
+        const wwEnd = nextNap ? new Date(nextNap.start) : /* @__PURE__ */ new Date(864e13);
+        return t >= wwStart && t < wwEnd;
+      });
+      return !inAnyWakeWindow;
+    }).map((f) => {
+      const vol = parseFloat(f.consumed || f.offered || 0);
+      const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
+      return { id: `orphan-feed-${f.id}`, kind: "orphanFeed", type: "feed", label: `${ml}ml`, start: strToDate(f.time), raw: f };
+    })
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
   const typeColors = {
     wake: { bg: PAL.wakeLight, dot: PAL.wake, text: PAL.text },
@@ -1557,7 +1600,18 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       const nextPart = ev.parts[pi + 1];
       const gapMins = part.end && nextPart ? diffMins(new Date(part.end), new Date(nextPart.start)) : null;
       return /* @__PURE__ */ React.createElement(React.Fragment, { key: part.id }, /* @__PURE__ */ React.createElement("div", { onClick: () => setEditSleep(part), style: { background: pi % 2 === 0 ? PAL.sleepLight : PAL.card, padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderTop: `1px solid ${PAL.border}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.text, fontWeight: 600 } }, "Part ", pi + 1), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Start: ", fmt12(new Date(part.start))), part.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "End: ", fmt12(new Date(part.end))), part.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Duration: ", dur))), gapMins !== null && gapMins > 0 && /* @__PURE__ */ React.createElement("div", { style: { background: PAL.wakeLight, padding: "5px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px dashed ${PAL.border}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.muted, fontStyle: "italic" } }, "awake"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.muted, fontWeight: 600 } }, durationLabel(gapMins))));
-    })) : ev.kind === "nightSleep" ? /* @__PURE__ */ React.createElement("div", { onClick: () => setEditSleep(ev.raw), style: { flex: 1, background: "#1a2a4a", borderRadius: 14, padding: "10px 14px", border: "1.5px solid #4A90D9", opacity: isPast ? 0.7 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: "#ffffff" } }, "\u{1F319} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#7BA7C0" } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "Start: ", fmt12(new Date(ev.start))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "End: ", fmt12(new Date(ev.end))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "Duration: ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end))))))) : ev.kind === "actualNap" ? /* @__PURE__ */ React.createElement("div", { onClick: () => ev.parts && ev.parts[0] && setEditSleep(ev.parts[0]), style: { flex: 1, background: PAL.sleepLight, borderRadius: 14, padding: "10px 14px", border: `1.5px solid ${PAL.sleep}55`, opacity: isPast ? 0.55 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, "\u{1F4A4} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Start: ", fmt12(new Date(ev.start))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "End: ", fmt12(new Date(ev.end))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Duration: ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))))), ev.subLabel && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, ev.subLabel)) : /* @__PURE__ */ React.createElement(
+    })) : ev.kind === "orphanFeed" ? /* @__PURE__ */ React.createElement("div", { onClick: () => setEditFeed(ev.raw), style: {
+      flex: 1,
+      background: PAL.feedLight,
+      borderRadius: 14,
+      padding: "8px 14px",
+      border: `1.5px solid ${PAL.feed}55`,
+      opacity: isPast ? 0.55 : 1,
+      cursor: "pointer",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center"
+    } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.feed } }, "\u{1F37C} ", ev.label), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, fmt12(new Date(ev.start))), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F"))) : ev.kind === "nightSleep" ? /* @__PURE__ */ React.createElement("div", { onClick: () => setEditSleep(ev.raw), style: { flex: 1, background: "#1a2a4a", borderRadius: 14, padding: "10px 14px", border: "1.5px solid #4A90D9", opacity: isPast ? 0.7 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: "#ffffff" } }, "\u{1F319} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#7BA7C0" } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "Start: ", fmt12(new Date(ev.start))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "End: ", fmt12(new Date(ev.end))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "Duration: ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end))))))) : ev.kind === "actualNap" ? /* @__PURE__ */ React.createElement("div", { onClick: () => ev.parts && ev.parts[0] && setEditSleep(ev.parts[0]), style: { flex: 1, background: PAL.sleepLight, borderRadius: 14, padding: "10px 14px", border: `1.5px solid ${PAL.sleep}55`, opacity: isPast ? 0.55 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, "\u{1F4A4} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Start: ", fmt12(new Date(ev.start))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "End: ", fmt12(new Date(ev.end))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Duration: ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))))), ev.subLabel && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, ev.subLabel)) : /* @__PURE__ */ React.createElement(
       "div",
       {
         style: {
@@ -2071,6 +2125,7 @@ function App() {
     if (sleeps2) setSleeps(sleeps2);
     setAuthLoading(false);
   }, []);
+  const [activeSleep, setActiveSleep] = useState(null);
   const handleUpdateBabyProfile = useCallback(async (updated) => {
     setBabyProfile(updated);
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
@@ -2192,7 +2247,7 @@ function App() {
     { id: "summary", icon: "\u{1F4CA}", label: "History" },
     { id: "settings", icon: "\u{1F464}", label: "Account" }
   ];
-  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, fontFamily: "'Figtree', 'Helvetica Neue', sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap');* { box-sizing: border-box; } body { margin: 0; } @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.25; } 50% { transform: scale(1.7); opacity: 0.08; } } @keyframes spin { to { transform: rotate(360deg); } }`), /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderBottom: `1px solid ${PAL.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 10 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 24 }), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 20, color: PAL.text, fontWeight: 700 } }, "Milk & Moon"), /* @__PURE__ */ React.createElement("span", { style: { marginLeft: "auto", fontSize: 13, background: PAL.primary, color: "#fff", borderRadius: 20, padding: "3px 10px", fontWeight: 600 } }, "Today")), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 16px 80px", maxWidth: 500, margin: "0 auto" } }, tab === "schedule" && /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, fontFamily: "'Figtree', 'Helvetica Neue', sans-serif" } }, /* @__PURE__ */ React.createElement("style", null, `@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap');* { box-sizing: border-box; } body { margin: 0; } @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.25; } 50% { transform: scale(1.7); opacity: 0.08; } } @keyframes spin { to { transform: rotate(360deg); } }`), /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderBottom: `1px solid ${PAL.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 10 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 24 }), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "'Figtree', sans-serif", fontSize: 20, color: PAL.text, fontWeight: 700 } }, "Milk & Moon"), /* @__PURE__ */ React.createElement("span", { style: { marginLeft: "auto", fontSize: 13, background: PAL.primary, color: "#fff", borderRadius: 20, padding: "3px 10px", fontWeight: 600 } }, "Today")), activeSleep && /* @__PURE__ */ React.createElement(NapBanner, { activeSleep, onTap: () => setTab("schedule") }), /* @__PURE__ */ React.createElement("div", { style: { padding: "20px 16px 80px", maxWidth: 500, margin: "0 auto" } }, tab === "schedule" && /* @__PURE__ */ React.createElement(
     ScheduleTab,
     {
       schedule,
@@ -2200,6 +2255,8 @@ function App() {
       feeds,
       sleeps,
       babyProfile,
+      activeSleep,
+      onSetActiveSleep: setActiveSleep,
       onUpdateSchedule: saveSchedule,
       onSaveScheduleSettings: (s) => {
         localStorage.setItem("lb_settings", JSON.stringify(s));
