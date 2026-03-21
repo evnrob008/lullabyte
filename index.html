@@ -1884,6 +1884,7 @@ function App() {
     return [];
   });
   const handleAuth = useCallback(async (u) => {
+    var _a;
     localStorage.setItem("lb_user", JSON.stringify(u));
     const uid = u.uid || u.email || "default";
     setUser(u);
@@ -1901,8 +1902,19 @@ function App() {
     if (baby) setBabyProfile(baby);
     if (settings) {
       setScheduleSettings(settings);
-      if (schedule2) {
-        setSchedule(schedule2.map((e) => __spreadProps(__spreadValues({}, e), { start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null })));
+      if (schedule2 && schedule2.length > 0) {
+        const parsed = schedule2.map((e) => __spreadProps(__spreadValues({}, e), { start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null }));
+        const today = (/* @__PURE__ */ new Date()).toDateString();
+        const scheduleDate = ((_a = parsed[0]) == null ? void 0 : _a.start) ? new Date(parsed[0].start).toDateString() : null;
+        if (scheduleDate === today) {
+          setSchedule(parsed);
+        } else {
+          const fresh = generateSchedule(settings);
+          setSchedule(fresh);
+          const uid2 = u.uid || u.email || "default";
+          const dataUid2 = localStorage.getItem("lb_data_uid") || uid2;
+          fsSet(dataUid2, "schedule", fresh);
+        }
       } else {
         setSchedule(generateSchedule(settings));
       }
