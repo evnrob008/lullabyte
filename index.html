@@ -1048,6 +1048,28 @@ function Overlay({ children, onClose }) {
     /* @__PURE__ */ React.createElement("div", { style: { background: PAL.card, borderRadius: "20px 20px 0 0", padding: "28px 24px 40px", width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 36, height: 4, background: PAL.border, borderRadius: 2, margin: "0 auto 20px" } }), children)
   );
 }
+function FeedChip({ f, onEdit }) {
+  const toMl = (v) => {
+    const n = parseFloat(v || 0);
+    return f.unit === "oz" ? Math.round(n * 29.5735) : n;
+  };
+  const consumedMl = toMl(f.consumed);
+  const offeredMl = toMl(f.offered);
+  const displayMl = consumedMl > 0 ? consumedMl : offeredMl;
+  const showOffered = offeredMl > 0;
+  return /* @__PURE__ */ React.createElement("div", { onClick: onEdit, style: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    background: PAL.feedLight,
+    borderRadius: 10,
+    padding: "6px 10px",
+    fontSize: 12,
+    color: PAL.feed,
+    fontWeight: 600,
+    cursor: "pointer"
+  } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F37C} ", displayMl, "ml", showOffered && /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, " (", offeredMl, "ml offered)")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5, marginLeft: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, fmt12(strToDate(f.time))), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")));
+}
 function NapLogModal({ todaySleeps, schedule, scheduleSettings, activeSleep, onStartTimer, onSaveNap, onClose }) {
   const [mode, setMode] = useState("choose");
   const [startTime, setStartTime] = useState(toTimeInput(/* @__PURE__ */ new Date()));
@@ -1278,7 +1300,14 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     return d.toDateString() === today.toDateString();
   });
   const bottleFeeds = todayFeeds.filter((f) => f.type === "formula");
-  const napSleeps = todaySleeps.filter((s) => !s.isNight);
+  const wakeHour = (scheduleSettings == null ? void 0 : scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
+  const bedHour = (scheduleSettings == null ? void 0 : scheduleSettings.bedTime) ? parseInt(scheduleSettings.bedTime.split(":")[0]) : 19;
+  const isNightSleep = (s) => {
+    const h = new Date(s.start).getHours();
+    return s.isNight || h >= bedHour || h < wakeHour;
+  };
+  const napSleeps = todaySleeps.filter((s) => !isNightSleep(s));
+  const nightSleeps = todaySleeps.filter((s) => isNightSleep(s)).filter((s) => s.end);
   const compoundNapGroups = [];
   const usedNapIds = /* @__PURE__ */ new Set();
   napSleeps.forEach((s) => {
@@ -1318,7 +1347,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   const allTimelineItems = [
     // Include scheduled events EXCEPT naps that have been replaced by a logged nap
     ...schedule.map((e) => __spreadProps(__spreadValues({}, e), { kind: "scheduled" })).filter((e) => !(e.type === "nap" && replacedScheduledNapIds.has(e.id))),
-    ...todaySleeps.filter((s) => s.isNight).map((s) => ({ id: `night-${s.id}`, kind: "nightSleep", label: "Night Sleep", subLabel: s.end ? durationLabel(diffMins(new Date(s.start), new Date(s.end))) : "Ongoing", start: new Date(s.start), type: "nightSleep", raw: s })),
+    ...nightSleeps.map((s, idx) => ({ id: `night-${s.id}`, kind: "nightSleep", label: `Night Sleep ${idx + 1}`, subLabel: durationLabel(diffMins(new Date(s.start), new Date(s.end))), start: new Date(s.start), end: new Date(s.end), type: "nightSleep", raw: s, isNightSleep: true })),
     ...compoundNapGroups.map((chain) => {
       const isCompound = chain.length > 1;
       const totalMs = chain.reduce((sum, s) => sum + (s.end ? new Date(s.end) - new Date(s.start) : 0), 0);
@@ -1347,7 +1376,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     feed: { bg: PAL.feedLight, dot: PAL.feed, text: PAL.text },
     nightSleep: { bg: PAL.sleepLight, dot: "#7BA7C0", text: PAL.text }
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { paddingBottom: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("h2", { style: { margin: 0, fontFamily: "'Figtree', sans-serif", fontSize: 22, color: PAL.text } }, (babyProfile == null ? void 0 : babyProfile.name) ? `${babyProfile.name}'s Schedule` : "Today's Schedule"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowSettings(true), style: { background: PAL.soft, border: "none", borderRadius: 10, padding: "8px 14px", color: PAL.primary, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u2699\uFE0F Settings")), scheduleSettings && (() => {
+  return /* @__PURE__ */ React.createElement("div", { style: { paddingBottom: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h2", { style: { margin: 0, fontFamily: "'Figtree', sans-serif", fontSize: 22, color: PAL.text } }, (babyProfile == null ? void 0 : babyProfile.name) ? `${babyProfile.name}'s Schedule` : "Today's Schedule"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, marginTop: 2 } }, (/* @__PURE__ */ new Date()).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }))), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowSettings(true), style: { background: PAL.soft, border: "none", borderRadius: 10, padding: "8px 14px", color: PAL.primary, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u2699\uFE0F Settings")), scheduleSettings && (() => {
     const now2 = /* @__PURE__ */ new Date();
     const midnight = new Date(now2);
     midnight.setHours(0, 0, 0, 0);
@@ -1492,7 +1521,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       const nextPart = ev.parts[pi + 1];
       const gapMins = part.end && nextPart ? diffMins(new Date(part.end), new Date(nextPart.start)) : null;
       return /* @__PURE__ */ React.createElement(React.Fragment, { key: part.id }, /* @__PURE__ */ React.createElement("div", { onClick: () => setEditSleep(part), style: { background: pi % 2 === 0 ? PAL.sleepLight : PAL.card, padding: "8px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${PAL.border}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.text, fontWeight: 600 } }, "Part ", pi + 1), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, fmt12(new Date(part.start)), part.end ? ` \u2013 ${fmt12(new Date(part.end))}` : "", " \xB7 ", dur)), gapMins !== null && gapMins > 0 && /* @__PURE__ */ React.createElement("div", { style: { background: PAL.wakeLight, padding: "5px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px dashed ${PAL.border}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.muted, fontStyle: "italic" } }, "awake"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.muted, fontWeight: 600 } }, durationLabel(gapMins))));
-    })) : ev.kind === "actualNap" ? /* @__PURE__ */ React.createElement("div", { onClick: () => ev.parts && ev.parts[0] && setEditSleep(ev.parts[0]), style: { flex: 1, background: PAL.sleepLight, borderRadius: 14, padding: "10px 14px", border: `1.5px solid ${PAL.sleep}55`, opacity: isPast ? 0.55 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, "\u{1F4A4} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, fmt12(new Date(ev.start)), ev.end ? ` \u2013 ${fmt12(new Date(ev.end))}` : "")), ev.subLabel && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, ev.subLabel)) : /* @__PURE__ */ React.createElement(
+    })) : ev.kind === "nightSleep" ? /* @__PURE__ */ React.createElement("div", { onClick: () => setEditSleep(ev.raw), style: { flex: 1, background: "#1a2a4a", borderRadius: 14, padding: "10px 14px", border: "1.5px solid #4A90D9", opacity: isPast ? 0.7 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: "#ffffff" } }, "\u{1F319} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "#7BA7C0" } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "Start: ", fmt12(new Date(ev.start))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "End: ", fmt12(new Date(ev.end))), ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: "#a0bcd4" } }, "Duration: ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end))))))) : ev.kind === "actualNap" ? /* @__PURE__ */ React.createElement("div", { onClick: () => ev.parts && ev.parts[0] && setEditSleep(ev.parts[0]), style: { flex: 1, background: PAL.sleepLight, borderRadius: 14, padding: "10px 14px", border: `1.5px solid ${PAL.sleep}55`, opacity: isPast ? 0.55 : 1, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, "\u{1F4A4} ", ev.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, fmt12(new Date(ev.start)), ev.end ? ` \u2013 ${fmt12(new Date(ev.end))}` : "")), ev.subLabel && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, ev.subLabel)) : /* @__PURE__ */ React.createElement(
       "div",
       {
         style: {
@@ -1507,15 +1536,25 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         },
         onClick: () => isScheduled && ev.editable && setEditEvent(ev)
       },
-      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : 700, fontSize: 14, color: PAL.text } }, ev.label), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, ev.type === "wake" && ev.id !== "wake-0" ? (() => {
-        const prevEv = allTimelineItems[i - 1];
-        const actualStart = (prevEv == null ? void 0 : prevEv.end) ? new Date(prevEv.end) : (prevEv == null ? void 0 : prevEv.start) ? new Date(prevEv.start) : new Date(ev.start);
-        return fmt12(actualStart);
-      })() : fmt12(new Date(ev.start))), isScheduled && ev.editable && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")), ev.type === "nap" && ev.end && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(ev.end)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(ev.end)))), ev.type === "wake" && ev.id !== "wake-0" && (() => {
-        const nextNapEv = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap");
-        if (!nextNapEv) return null;
-        return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "until ", fmt12(new Date(nextNapEv.start)), " \xB7 ", durationLabel(diffMins(new Date(ev.start), new Date(nextNapEv.start))));
-      })(), ev.type === "wake" && ev.id !== "wake-0" && (() => {
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : 700, fontSize: 14, color: PAL.text } }, ev.label), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, (() => {
+        let startTime = new Date(ev.start);
+        if (ev.type === "wake" && ev.id !== "wake-0") {
+          const prevEv = allTimelineItems[i - 1];
+          if (prevEv == null ? void 0 : prevEv.end) startTime = new Date(prevEv.end);
+          else if (prevEv == null ? void 0 : prevEv.start) startTime = new Date(prevEv.start);
+        }
+        let endTime = ev.end ? new Date(ev.end) : null;
+        if (ev.type === "wake" && ev.id !== "wake-0") {
+          const nextNapEv = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap");
+          if (nextNapEv) endTime = new Date(nextNapEv.start);
+        }
+        const showTimes = ev.type === "nap" && ev.end || ev.type === "wake" && ev.id !== "wake-0" && endTime;
+        if (!showTimes) {
+          return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, fmt12(startTime));
+        }
+        const dur = endTime ? diffMins(startTime, endTime) : 0;
+        return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Start: ", fmt12(startTime)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "End: ", fmt12(endTime)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Duration: ", durationLabel(dur)));
+      })(), isScheduled && ev.editable && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary, marginTop: 2 } }, "\u270F\uFE0F")), ev.type === "wake" && ev.id !== "wake-0" && (() => {
         const wwStart = new Date(ev.start);
         const nextNapEv = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap");
         const wwEnd = nextNapEv ? new Date(nextNapEv.start) : /* @__PURE__ */ new Date(864e13);
@@ -1527,18 +1566,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginTop: 8 } }, feedsInWindow.map((f) => {
           const vol = parseFloat(f.consumed || f.offered || 0);
           const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
-          return /* @__PURE__ */ React.createElement("div", { key: f.id, onClick: () => setEditFeed(f), style: {
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: PAL.feedLight,
-            borderRadius: 10,
-            padding: "6px 10px",
-            fontSize: 12,
-            color: PAL.feed,
-            fontWeight: 600,
-            cursor: "pointer"
-          } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F37C} ", ml, "ml"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, fmt12(strToDate(f.time))), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")));
+          return /* @__PURE__ */ React.createElement(FeedChip, { key: f.id, f, onEdit: () => setEditFeed(f) });
         }));
       })()))
     )));
