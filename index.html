@@ -659,18 +659,18 @@ function rebuildFromIndex(events, fromIdx, settings) {
     { id: "bed", type: "sleep", label: "Bedtime", start: finalBed, end: null, editable: true, originalFinalWW: wakeWindowMins, scheduledWW: actualWW }
   ];
 }
-function FeedModal({ onSave, onClose, initial }) {
-  const [type, setType] = useState((initial == null ? void 0 : initial.type) || "formula");
-  const [offered, setOffered] = useState((initial == null ? void 0 : initial.offered) || "");
-  const [consumed, setConsumed] = useState((initial == null ? void 0 : initial.consumed) || "");
-  const [time, setTime] = useState((initial == null ? void 0 : initial.time) || toTimeInput(/* @__PURE__ */ new Date()));
-  const [unit, setUnit] = useState((initial == null ? void 0 : initial.unit) || "ml");
-  const [side, setSide] = useState((initial == null ? void 0 : initial.side) || "left");
-  const [duration, setDuration] = useState((initial == null ? void 0 : initial.duration) || "");
+function FeedModal({ onSave, onClose, initial: initial2, onDelete: onDelete2 }) {
+  const [type, setType] = useState((initial2 == null ? void 0 : initial2.type) || "formula");
+  const [offered, setOffered] = useState((initial2 == null ? void 0 : initial2.offered) || "");
+  const [consumed, setConsumed] = useState((initial2 == null ? void 0 : initial2.consumed) || "");
+  const [time, setTime] = useState((initial2 == null ? void 0 : initial2.time) || toTimeInput(/* @__PURE__ */ new Date()));
+  const [unit, setUnit] = useState((initial2 == null ? void 0 : initial2.unit) || "ml");
+  const [side, setSide] = useState((initial2 == null ? void 0 : initial2.side) || "left");
+  const [duration, setDuration] = useState((initial2 == null ? void 0 : initial2.duration) || "");
   const isBreast = type === "breast";
   const save = () => {
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    onSave({ id: (initial == null ? void 0 : initial.id) || Date.now(), type, offered: isBreast ? null : Number(offered), consumed: isBreast ? null : Number(consumed), time, unit, side: isBreast ? side : null, duration: isBreast ? Number(duration) : null, date: (initial == null ? void 0 : initial.date) || today });
+    onSave({ id: (initial2 == null ? void 0 : initial2.id) || Date.now(), type, offered: isBreast ? null : Number(offered), consumed: isBreast ? null : Number(consumed), time, unit, side: isBreast ? side : null, duration: isBreast ? Number(duration) : null, date: (initial2 == null ? void 0 : initial2.date) || today });
     onClose();
   };
   const inp = {
@@ -720,15 +720,15 @@ function FeedModal({ onSave, onClose, initial }) {
     fontFamily: "inherit"
   } }, u)))), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.feed, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, "Save Feed")));
 }
-function SleepModal({ onSave, onClose, initial, isNight }) {
-  const [start, setStart] = useState((initial == null ? void 0 : initial.start) ? toTimeInput(new Date(initial.start)) : toTimeInput(/* @__PURE__ */ new Date()));
-  const [end, setEnd] = useState((initial == null ? void 0 : initial.end) ? toTimeInput(new Date(initial.end)) : "");
+function SleepModal({ onSave, onClose, initial: initial2, isNight, onDelete: onDelete2 }) {
+  const [start, setStart] = useState((initial2 == null ? void 0 : initial2.start) ? toTimeInput(new Date(initial2.start)) : toTimeInput(/* @__PURE__ */ new Date()));
+  const [end, setEnd] = useState((initial2 == null ? void 0 : initial2.end) ? toTimeInput(new Date(initial2.end)) : "");
   const save = () => {
     var _a;
     const s = strToDate(start);
     let e = end ? strToDate(end) : null;
     if (e && e < s) e.setDate(e.getDate() + 1);
-    onSave({ id: (initial == null ? void 0 : initial.id) || Date.now(), start: s, end: e, isNight: !!isNight, linkedToId: (_a = initial == null ? void 0 : initial.linkedToId) != null ? _a : null });
+    onSave({ id: (initial2 == null ? void 0 : initial2.id) || Date.now(), start: s, end: e, isNight: !!isNight, linkedToId: (_a = initial2 == null ? void 0 : initial2.linkedToId) != null ? _a : null });
     onClose();
   };
   const inp = {
@@ -743,7 +743,19 @@ function SleepModal({ onSave, onClose, initial, isNight }) {
     outline: "none",
     boxSizing: "border-box"
   };
-  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 18px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, isNight ? "\u{1F319} Night Sleep" : "\u{1F4A4} Nap"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Sleep start", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: start, onChange: (e) => setStart(e.target.value) })), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Wake up (leave blank if still sleeping)", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: end, onChange: (e) => setEnd(e.target.value) })), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, "Save Sleep")));
+  return /* @__PURE__ */ React.createElement(Overlay, { onClose }, /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 18px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, isNight ? "\u{1F319} Night Sleep" : "\u{1F4A4} Nap"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Sleep start", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: start, onChange: (e) => setStart(e.target.value) })), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Wake up (leave blank if still sleeping)", /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: end, onChange: (e) => setEnd(e.target.value) })), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, (initial2 == null ? void 0 : initial2.id) ? "Update Nap" : "Save Nap"), (initial2 == null ? void 0 : initial2.id) && onDelete2 && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => {
+        if (window.confirm("Delete this nap?")) {
+          onDelete2(initial2.id);
+          onClose();
+        }
+      },
+      style: { padding: "13px", borderRadius: 11, border: `1.5px solid #E57373`, background: "transparent", color: "#E57373", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }
+    },
+    "Delete Nap"
+  )));
 }
 function EditEventModal({ event, scheduleSettings, allEvents, onSave, onClose }) {
   const [startTime, setStartTime] = useState(toTimeInput(new Date(event.start)));
@@ -826,7 +838,19 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onClose })
     if (e < s) e.setDate(e.getDate() + 1);
     const dur = diffMins(s, e);
     return dur > 0 ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.primary, fontWeight: 600 } }, "Duration: ", durationLabel(dur)) : null;
-  })(), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, "Update Event")));
+  })(), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, (initial == null ? void 0 : initial.id) ? "Update Feed" : "Log Feed"), (initial == null ? void 0 : initial.id) && onDelete && /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => {
+        if (window.confirm("Delete this feed?")) {
+          onDelete(initial.id);
+          onClose();
+        }
+      },
+      style: { padding: "13px", borderRadius: 11, border: `1.5px solid #E57373`, background: "transparent", color: "#E57373", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 }
+    },
+    "Delete Feed"
+  )));
 }
 function ScheduleSettingsModal({ settings, onSave, onClose }) {
   const [s, setS] = useState(__spreadValues({}, settings));
@@ -1356,7 +1380,7 @@ Keep responses concise and friendly. Never use markdown headers or bullet asteri
     }
   ), /* @__PURE__ */ React.createElement("button", { onClick: handleSend, disabled: loading || !input.trim(), style: { width: 44, borderRadius: 10, border: "none", background: "linear-gradient(135deg, #7C9E8A, #A8C4D4)", color: "#fff", fontSize: 18, cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 } }, "\u2191")));
 }
-function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep, babyProfile, activeSleep, onSetActiveSleep }) {
+function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep, onDeleteFeed, onDeleteSleep, babyProfile, activeSleep, onSetActiveSleep }) {
   var _a;
   const [showSettings, setShowSettings] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
@@ -1473,6 +1497,23 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       return { id: `orphan-feed-${f.id}`, kind: "orphanFeed", type: "feed", label: `${ml}ml`, start: strToDate(f.time), raw: f };
     })
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
+  let napCounter = 0;
+  allTimelineItems.forEach((ev) => {
+    if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
+      napCounter++;
+      const num = napCounter;
+      if (ev.kind === "actualNap") {
+        ev.label = `Nap ${num}`;
+      } else {
+        ev.label = `Nap ${num} \xB7 Split`;
+      }
+    }
+  });
+  allTimelineItems.forEach((ev) => {
+    if (ev.kind === "nightSleep") {
+      ev.label = "Night Sleep";
+    }
+  });
   const typeColors = {
     wake: { bg: PAL.wakeLight, dot: PAL.wake, text: PAL.text },
     nap: { bg: PAL.sleepLight, dot: PAL.sleep, text: PAL.text },
@@ -1778,6 +1819,18 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     {
       initial: editSleep,
       isNight: false,
+      onDelete: (id) => {
+        onDeleteSleep(id);
+        const updatedSchedule = schedule.map(
+          (ev) => ev.type === "nap" && ev._recorded && Math.abs(new Date(ev.start) - new Date(editSleep.start)) < 2 * 60 * 60 * 1e3 ? __spreadProps(__spreadValues({}, ev), { _recorded: false }) : ev
+        );
+        onUpdateSchedule(rebuildFromIndex(
+          updatedSchedule,
+          updatedSchedule.findIndex((ev) => ev.type === "nap" && !ev._recorded && new Date(ev.start) > new Date(editSleep.start) - 2 * 60 * 60 * 1e3) >= 0 ? updatedSchedule.findIndex((ev) => ev.type === "nap" && !ev._recorded) : updatedSchedule.findIndex((ev) => ev.type === "nap"),
+          scheduleSettings
+        ));
+        setEditSleep(null);
+      },
       onSave: (updated) => {
         onSaveSleep(updated);
         const napSleepsUpdated = [...todaySleeps.filter((s) => s.id !== updated.id), updated].filter((s) => !s.isNight);
@@ -1826,7 +1879,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       onUpdateSchedule,
       onClose: () => setShowAI(false)
     }
-  ), editEvent && /* @__PURE__ */ React.createElement(EditEventModal, { event: editEvent, scheduleSettings, allEvents: schedule, onSave: onUpdateSchedule, onClose: () => setEditEvent(null) }), (showFeedModal || editFeed) && /* @__PURE__ */ React.createElement(FeedModal, { initial: editFeed, onSave: onSaveFeed, onClose: () => {
+  ), editEvent && /* @__PURE__ */ React.createElement(EditEventModal, { event: editEvent, scheduleSettings, allEvents: schedule, onSave: onUpdateSchedule, onClose: () => setEditEvent(null) }), (showFeedModal || editFeed) && /* @__PURE__ */ React.createElement(FeedModal, { initial: editFeed, onSave: onSaveFeed, onDelete: editFeed ? onDeleteFeed : null, onClose: () => {
     setShowFeedModal(false);
     setEditFeed(null);
   } }), showNightSleep && /* @__PURE__ */ React.createElement(SleepModal, { isNight: true, onSave: onSaveSleep, onClose: () => setShowNightSleep(false) }));
@@ -2234,6 +2287,18 @@ function App() {
     fsSet(getDataUid(), "schedule", sched);
     setSchedule(sched);
   }, []);
+  const deleteFeed = useCallback((id) => setFeeds((prev) => {
+    const next = prev.filter((x) => x.id !== id);
+    const uid = getDataUid();
+    fsSetArray(uid, "feeds", next);
+    return next;
+  }), []);
+  const deleteSleep = useCallback((id) => setSleeps((prev) => {
+    const next = prev.filter((x) => x.id !== id);
+    const uid = getDataUid();
+    fsSetArray(uid, "sleeps", next);
+    return next;
+  }), []);
   useEffect(() => {
     if (!localStorage.getItem("lb_history_seeded_v1")) {
       localStorage.setItem("lb_history_seeded_v1", "1");
@@ -2332,7 +2397,9 @@ function App() {
         setScheduleSettings(s);
       },
       onSaveFeed: saveFeed,
-      onSaveSleep: saveSleep
+      onSaveSleep: saveSleep,
+      onDeleteFeed: deleteFeed,
+      onDeleteSleep: deleteSleep
     }
   ), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps, scheduleSettings, currentSchedule: schedule }), tab === "settings" && /* @__PURE__ */ React.createElement(
     SettingsTab,
