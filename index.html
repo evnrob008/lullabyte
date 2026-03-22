@@ -525,6 +525,7 @@ function generateSchedule({ wakeTime, bedTime, numNaps, wakeWindowMins, napDurat
   return events;
 }
 function rebuildFromIndex(events, fromIdx, settings) {
+  var _a, _b, _c, _d;
   const { wakeWindowMins, napDurationMins } = settings;
   const prefix = events.slice(0, fromIdx + 1).map((e) => __spreadValues({}, e));
   const startCursor = new Date(prefix[fromIdx].end || prefix[fromIdx].start);
@@ -532,6 +533,18 @@ function rebuildFromIndex(events, fromIdx, settings) {
   const n = remaining.length;
   const napDurs = remaining.map((r) => r.originalDurationMins || napDurationMins);
   const ww = wakeWindowMins;
+  const prevWWIdx = (_b = (_a = prefix.map((e, i) => ({ e, i })).reverse().find(({ e }) => e.type === "wake" && e.id !== "wake-0")) == null ? void 0 : _a.i) != null ? _b : -1;
+  if (prevWWIdx >= 0 && prefix[fromIdx].type === "nap") {
+    const napStart = new Date(prefix[fromIdx].start);
+    const wwStart = addMins(napStart, -ww);
+    prefix[prevWWIdx] = __spreadProps(__spreadValues({}, prefix[prevWWIdx]), { start: wwStart, end: napStart });
+    const prevNapIdx = (_d = (_c = prefix.slice(0, prevWWIdx).map((e, i) => ({ e, i })).reverse().find(({ e }) => e.type === "nap" || e.id === "wake-0")) == null ? void 0 : _c.i) != null ? _d : -1;
+    if (prevNapIdx >= 0 && prefix[prevNapIdx].type === "nap") {
+      prefix[prevWWIdx] = __spreadProps(__spreadValues({}, prefix[prevWWIdx]), { start: new Date(prefix[prevNapIdx].end), end: napStart });
+    } else if (prevNapIdx >= 0 && prefix[prevNapIdx].id === "wake-0") {
+      prefix[prevWWIdx] = __spreadProps(__spreadValues({}, prefix[prevWWIdx]), { start: new Date(prefix[prevNapIdx].start), end: napStart });
+    }
+  }
   const newItems = [];
   let buildCursor = new Date(startCursor);
   let wwNum = prefix.filter((e) => e.type === "wake" && e.id !== "wake-0").length;
@@ -1628,14 +1641,9 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
           else if (prevEv == null ? void 0 : prevEv.start) startTime = new Date(prevEv.start);
         }
         let endTime = ev.end ? new Date(ev.end) : null;
-        if (ev.type === "wake") {
-          if (ev.id === "wake-0") {
-            const nextScheduledNap = schedule.find((e) => e.type === "nap");
-            if (nextScheduledNap) endTime = new Date(nextScheduledNap.start);
-          } else {
-            const nextNapEv = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap");
-            if (nextNapEv) endTime = new Date(nextNapEv.start);
-          }
+        if (ev.type === "wake" && !endTime) {
+          const nextNapEv = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap");
+          if (nextNapEv) endTime = new Date(nextNapEv.start);
         }
         const showTimes = ev.type === "nap" && ev.end || ev.type === "wake" && ev.id !== "wake-0" && endTime;
         if (!showTimes) {
