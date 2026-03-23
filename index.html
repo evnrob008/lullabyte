@@ -87,331 +87,186 @@ function BabyProfileEditor({ babyProfile, onSave, onClose }) {
   const [dob, setDob] = React.useState((babyProfile == null ? void 0 : babyProfile.dob) || "");
   const [photo, setPhoto] = React.useState((babyProfile == null ? void 0 : babyProfile.photo) || null);
   const [cropSrc, setCropSrc] = React.useState(null);
-  const [cropOffset, setCropOffset] = React.useState({ x: 0, y: 0 });
-  const [cropScale, setCropScale] = React.useState(1);
-  const [dragging, setDragging] = React.useState(false);
-  const [dragStart, setDragStart] = React.useState(null);
-  const imgRef = React.useRef(null);
   const canvasRef = React.useRef(null);
-  const CROP_SIZE = 200;
+  const imageRef = React.useRef(null);
+  const cropState = React.useRef({ x: 0, y: 0, scale: 1 });
+  const dragRef = React.useRef(null);
+  const pinchRef = React.useRef(null);
+  const CROP_SIZE = 260;
   const age = dob ? formatAge(dob) : null;
   const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid " + PAL.border, fontSize: 15, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const drawCanvas = () => {
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+    const ctx = canvas.getContext("2d");
+    const { x, y, scale } = cropState.current;
+    ctx.clearRect(0, 0, CROP_SIZE, CROP_SIZE);
+    ctx.drawImage(img, x, y, img.naturalWidth * scale, img.naturalHeight * scale);
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.beginPath();
+    ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(0, 0, CROP_SIZE, CROP_SIZE);
+    ctx.restore();
+    ctx.strokeStyle = "#7C9E8A";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2 - 2, 0, Math.PI * 2);
+    ctx.stroke();
+  };
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setCropSrc(ev.target.result);
-      setCropOffset({ x: 0, y: 0 });
-      setCropScale(1);
+      const img = new Image();
+      img.onload = () => {
+        imageRef.current = img;
+        const scale = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+        const x = (CROP_SIZE - img.naturalWidth * scale) / 2;
+        const y = (CROP_SIZE - img.naturalHeight * scale) / 2;
+        cropState.current = { x, y, scale };
+        setCropSrc(ev.target.result);
+        requestAnimationFrame(drawCanvas);
+      };
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   };
-  const getCroppedImage = () => {
-    if (!imgRef.current || !canvasRef.current) return null;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    canvas.width = CROP_SIZE;
-    canvas.height = CROP_SIZE;
-    ctx.beginPath();
-    ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2, 0, Math.PI * 2);
-    ctx.clip();
-    const img = imgRef.current;
-    const scaledW = img.naturalWidth * cropScale;
-    const scaledH = img.naturalHeight * cropScale;
-    ctx.drawImage(img, cropOffset.x, cropOffset.y, scaledW, scaledH);
-    return canvas.toDataURL("image/jpeg", 0.8);
+  React.useEffect(() => {
+    if (cropSrc) requestAnimationFrame(drawCanvas);
+  }, [cropSrc]);
+  const getClientPos = (e) => {
+    if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
   };
-  const applyCrop = () => {
-    const cropped = getCroppedImage();
-    if (cropped) {
-      setPhoto(cropped);
-      setCropSrc(null);
-    }
+  const getCanvasPos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const pos = getClientPos(e);
+    return { x: pos.x - rect.left, y: pos.y - rect.top };
   };
-  const [pinchDist, setPinchDist] = React.useState(null);
-  const getPinchDist = (touches) => {
+  const pinchDist = (touches) => {
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
     return Math.hypot(dx, dy);
   };
-  const onTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      const t = e.touches[0];
-      setDragging(true);
-      setDragStart({ x: t.clientX - cropOffset.x, y: t.clientY - cropOffset.y });
-    } else if (e.touches.length === 2) {
-      setDragging(false);
-      setPinchDist(getPinchDist(e.touches));
-    }
-  };
-  const onTouchMove = (e) => {
+  const pinchMid = (touches) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2
+  });
+  const handleTouchStart = (e) => {
     e.preventDefault();
-    if (e.touches.length === 2 && pinchDist !== null) {
-      const newDist = getPinchDist(e.touches);
-      const ratio = newDist / pinchDist;
-      setCropScale((s) => Math.max(0.3, Math.min(5, s * ratio)));
-      setPinchDist(newDist);
-    } else if (e.touches.length === 1 && dragging && dragStart) {
+    if (e.touches.length === 1) {
+      const rect = canvasRef.current.getBoundingClientRect();
       const t = e.touches[0];
-      setCropOffset({ x: t.clientX - dragStart.x, y: t.clientY - dragStart.y });
+      dragRef.current = {
+        startX: t.clientX,
+        startY: t.clientY,
+        imgX: cropState.current.x,
+        imgY: cropState.current.y
+      };
+      pinchRef.current = null;
+    } else if (e.touches.length === 2) {
+      dragRef.current = null;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mid = pinchMid(e.touches);
+      pinchRef.current = {
+        dist: pinchDist(e.touches),
+        midX: mid.x - rect.left,
+        midY: mid.y - rect.top,
+        imgX: cropState.current.x,
+        imgY: cropState.current.y,
+        scale: cropState.current.scale
+      };
     }
   };
-  const onTouchEnd = () => {
-    setDragging(false);
-    setPinchDist(null);
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    if (e.touches.length === 2 && pinchRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const newDist = pinchDist(e.touches);
+      const ratio = newDist / pinchRef.current.dist;
+      const newScale = Math.max(0.2, Math.min(8, pinchRef.current.scale * ratio));
+      const mx = pinchRef.current.midX;
+      const my = pinchRef.current.midY;
+      const newX = mx - (mx - pinchRef.current.imgX) * (newScale / pinchRef.current.scale);
+      const newY = my - (my - pinchRef.current.imgY) * (newScale / pinchRef.current.scale);
+      cropState.current = { x: newX, y: newY, scale: newScale };
+      requestAnimationFrame(drawCanvas);
+    } else if (e.touches.length === 1 && dragRef.current) {
+      const t = e.touches[0];
+      const dx = t.clientX - dragRef.current.startX;
+      const dy = t.clientY - dragRef.current.startY;
+      cropState.current = __spreadProps(__spreadValues({}, cropState.current), { x: dragRef.current.imgX + dx, y: dragRef.current.imgY + dy });
+      requestAnimationFrame(drawCanvas);
+    }
   };
-  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: "3px solid " + PAL.border, background: PAL.soft, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 } }, photo ? /* @__PURE__ */ React.createElement("img", { src: photo, style: { width: "100%", height: "100%", objectFit: "cover" } }) : "\u{1F476}"), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.primary, fontWeight: 600, cursor: "pointer", padding: "6px 14px", borderRadius: 8, background: PAL.soft, border: "1.5px solid " + PAL.border } }, photo ? "Change photo" : "Upload photo", /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: handleFileChange }))), cropSrc && /* @__PURE__ */ React.createElement("div", { style: { background: "#000", borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#fff", marginBottom: 4 } }, "Drag to reposition \xB7 Pinch or scroll to zoom"), /* @__PURE__ */ React.createElement(
-    "div",
+  const handleTouchEnd = (e) => {
+    dragRef.current = null;
+    pinchRef.current = null;
+  };
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startY: e.clientY, imgX: cropState.current.x, imgY: cropState.current.y };
+  };
+  const handleMouseMove = (e) => {
+    if (!dragRef.current) return;
+    cropState.current = __spreadProps(__spreadValues({}, cropState.current), { x: dragRef.current.imgX + e.clientX - dragRef.current.startX, y: dragRef.current.imgY + e.clientY - dragRef.current.startY });
+    requestAnimationFrame(drawCanvas);
+  };
+  const handleMouseUp = () => {
+    dragRef.current = null;
+  };
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    const newScale = Math.max(0.2, Math.min(8, cropState.current.scale * factor));
+    const newX = mx - (mx - cropState.current.x) * (newScale / cropState.current.scale);
+    const newY = my - (my - cropState.current.y) * (newScale / cropState.current.scale);
+    cropState.current = { x: newX, y: newY, scale: newScale };
+    requestAnimationFrame(drawCanvas);
+  };
+  const applyCrop = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const out = document.createElement("canvas");
+    out.width = CROP_SIZE;
+    out.height = CROP_SIZE;
+    const ctx = out.getContext("2d");
+    ctx.drawImage(canvas, 0, 0);
+    setPhoto(out.toDataURL("image/jpeg", 0.85));
+    setCropSrc(null);
+  };
+  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: "3px solid " + PAL.border, background: PAL.soft, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 } }, photo ? /* @__PURE__ */ React.createElement("img", { src: photo, style: { width: "100%", height: "100%", objectFit: "cover" } }) : "\u{1F476}"), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.primary, fontWeight: 600, cursor: "pointer", padding: "6px 14px", borderRadius: 8, background: PAL.soft, border: "1.5px solid " + PAL.border } }, photo ? "Change photo" : "Upload photo", /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", capture: "environment", style: { display: "none" }, onChange: handleFileChange }))), cropSrc && /* @__PURE__ */ React.createElement("div", { style: { background: "#111", borderRadius: 16, padding: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 2 } }, "Drag to move \xB7 Pinch or scroll to zoom"), /* @__PURE__ */ React.createElement(
+    "canvas",
     {
-      style: { position: "relative", width: CROP_SIZE, height: CROP_SIZE, borderRadius: "50%", overflow: "hidden", cursor: "grab", border: "2px solid " + PAL.primary, touchAction: "none" },
-      onMouseDown: (e) => {
-        setDragging(true);
-        setDragStart({ x: e.clientX - cropOffset.x, y: e.clientY - cropOffset.y });
-        e.preventDefault();
-      },
-      onMouseMove: (e) => {
-        if (!dragging || !dragStart) return;
-        setCropOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-      },
-      onMouseUp: () => setDragging(false),
-      onMouseLeave: () => setDragging(false),
-      onWheel: (e) => {
-        e.preventDefault();
-        setCropScale((s) => Math.max(0.3, Math.min(5, s - e.deltaY * 3e-3)));
-      },
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd
-    },
-    /* @__PURE__ */ React.createElement(
-      "img",
-      {
-        ref: imgRef,
-        src: cropSrc,
-        draggable: false,
-        style: { position: "absolute", left: cropOffset.x, top: cropOffset.y, width: "auto", height: "auto", transform: "scale(" + cropScale + ")", transformOrigin: "0 0", userSelect: "none", pointerEvents: "none" }
-      }
-    )
-  ), /* @__PURE__ */ React.createElement("canvas", { ref: canvasRef, style: { display: "none" } }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, width: "100%" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setCropSrc(null), style: { flex: 1, padding: "10px", borderRadius: 9, border: "1.5px solid #555", background: "transparent", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Cancel"), /* @__PURE__ */ React.createElement("button", { onClick: applyCrop, style: { flex: 2, padding: "10px", borderRadius: 9, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Use Photo"))), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Baby name", /* @__PURE__ */ React.createElement("input", { style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: name, onChange: (e) => setName(e.target.value), placeholder: "e.g. Olivia" })), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Date of birth", /* @__PURE__ */ React.createElement("input", { style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), type: "date", max: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), value: dob, onChange: (e) => setDob(e.target.value) }), age && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.primary, marginTop: 4, fontWeight: 600 } }, age)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, marginBottom: 6 } }, "Gender"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, ["Girl", "Boy", "Other"].map((g) => /* @__PURE__ */ React.createElement("button", { key: g, onClick: () => setGender(g), style: { flex: 1, padding: "9px 0", borderRadius: 9, border: "none", background: gender === g ? PAL.primary : PAL.soft, color: gender === g ? "#fff" : PAL.muted, fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "inherit" } }, g)))), /* @__PURE__ */ React.createElement("button", { onClick: () => onSave(__spreadProps(__spreadValues({}, babyProfile), { name, gender, dob, photo })), style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" } }, "Save Profile"));
+      ref: canvasRef,
+      width: CROP_SIZE,
+      height: CROP_SIZE,
+      style: { borderRadius: "50%", cursor: "grab", touchAction: "none", display: "block", maxWidth: "100%" },
+      onMouseDown: handleMouseDown,
+      onMouseMove: handleMouseMove,
+      onMouseUp: handleMouseUp,
+      onMouseLeave: handleMouseUp,
+      onWheel: handleWheel,
+      onTouchStart: handleTouchStart,
+      onTouchMove: handleTouchMove,
+      onTouchEnd: handleTouchEnd
+    }
+  ), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, width: "100%" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    setCropSrc(null);
+    imageRef.current = null;
+  }, style: { flex: 1, padding: "10px", borderRadius: 9, border: "1.5px solid #444", background: "transparent", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Cancel"), /* @__PURE__ */ React.createElement("button", { onClick: applyCrop, style: { flex: 2, padding: "10px", borderRadius: 9, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Use Photo"))), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Baby name", /* @__PURE__ */ React.createElement("input", { style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: name, onChange: (e) => setName(e.target.value), placeholder: "e.g. Olivia" })), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Date of birth", /* @__PURE__ */ React.createElement("input", { style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), type: "date", max: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), value: dob, onChange: (e) => setDob(e.target.value) }), age && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.primary, marginTop: 4, fontWeight: 600 } }, age)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, marginBottom: 6 } }, "Gender"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, ["Girl", "Boy", "Other"].map((g) => /* @__PURE__ */ React.createElement("button", { key: g, onClick: () => setGender(g), style: { flex: 1, padding: "9px 0", borderRadius: 9, border: "none", background: gender === g ? PAL.primary : PAL.soft, color: gender === g ? "#fff" : PAL.muted, fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "inherit" } }, g)))), /* @__PURE__ */ React.createElement("button", { onClick: () => onSave(__spreadProps(__spreadValues({}, babyProfile), { name, gender, dob, photo })), style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" } }, "Save Profile"));
 }
-const PAL = {
-  bg: "#FDF8F3",
-  card: "#FFFFFF",
-  primary: "#7C9E8A",
-  primaryDark: "#5A7D68",
-  accent: "#E8A87C",
-  accentLight: "#FDF0E6",
-  soft: "#F4EDE4",
-  text: "#2D2417",
-  muted: "#9B8E83",
-  border: "#EDE5DC",
-  sleep: "#A8C4D4",
-  sleepLight: "#EAF3F8",
-  feed: "#D4A8C4",
-  feedLight: "#F8EAF3",
-  wake: "#C4D4A8",
-  wakeLight: "#F3F8EA"
-};
-const AppLogo = ({ size = 64 }) => {
-  const r = size * 0.22;
-  return /* @__PURE__ */ React.createElement("svg", { width: size, height: size, viewBox: "0 0 64 64", fill: "none", xmlns: "http://www.w3.org/2000/svg" }, /* @__PURE__ */ React.createElement("defs", null, /* @__PURE__ */ React.createElement("linearGradient", { id: "logoGrad", x1: "0", y1: "0", x2: "1", y2: "1" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: "#A8C4D4" }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: "#7C9E8A" })), /* @__PURE__ */ React.createElement("linearGradient", { id: "moonGrad", x1: "0", y1: "0", x2: "0", y2: "1" }, /* @__PURE__ */ React.createElement("stop", { offset: "0%", stopColor: "#FFF8F0" }), /* @__PURE__ */ React.createElement("stop", { offset: "100%", stopColor: "#F0EBE3" }))), /* @__PURE__ */ React.createElement("rect", { width: "64", height: "64", rx: "16", fill: "url(#logoGrad)" }), /* @__PURE__ */ React.createElement("rect", { x: "24", y: "28", width: "16", height: "22", rx: "5", fill: "white", fillOpacity: "0.95" }), /* @__PURE__ */ React.createElement("rect", { x: "27", y: "21", width: "10", height: "9", rx: "3", fill: "white", fillOpacity: "0.85" }), /* @__PURE__ */ React.createElement("rect", { x: "29.5", y: "17", width: "5", height: "6", rx: "2.5", fill: "white", fillOpacity: "0.7" }), /* @__PURE__ */ React.createElement("rect", { x: "24", y: "36", width: "16", height: "7", rx: "0", fill: "white", fillOpacity: "0.2" }), /* @__PURE__ */ React.createElement("circle", { cx: "14", cy: "13", r: "2", fill: "white", fillOpacity: "0.5" }), /* @__PURE__ */ React.createElement("circle", { cx: "51", cy: "11", r: "1.5", fill: "white", fillOpacity: "0.4" }), /* @__PURE__ */ React.createElement("circle", { cx: "53", cy: "50", r: "1.5", fill: "white", fillOpacity: "0.35" }));
-};
-const fmt12 = (d) => {
-  if (!d) return "";
-  const h = d.getHours(), m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hh = h % 12 || 12;
-  return `${hh}:${String(m).padStart(2, "0")} ${ampm}`;
-};
-const fmt12str = (timeStr) => {
-  if (!timeStr) return "";
-  const [h, m] = timeStr.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hh = h % 12 || 12;
-  return `${hh}:${String(m).padStart(2, "0")} ${ampm}`;
-};
-const calcAge = (dob) => {
-  if (!dob) return null;
-  const birth = new Date(dob);
-  const now = /* @__PURE__ */ new Date();
-  const totalDays = Math.floor((now - birth) / 864e5);
-  if (totalDays < 0) return null;
-  const months = Math.floor(totalDays / 30.4375);
-  const remaining = totalDays - Math.floor(months * 30.4375);
-  const weeks = Math.floor(remaining / 7);
-  const days = remaining % 7;
-  return { months, weeks, days, totalDays };
-};
-const formatAge = (dob) => {
-  const age = calcAge(dob);
-  if (!age) return null;
-  if (age.totalDays < 7) return age.totalDays + "d old";
-  const parts = [];
-  if (age.months > 0) parts.push(age.months + "m");
-  if (age.weeks > 0) parts.push(age.weeks + "w");
-  if (age.days > 0 || parts.length === 0) parts.push(age.days + "d");
-  return parts.join(" ") + " old";
-};
-const strToDate = (timeStr, base = /* @__PURE__ */ new Date()) => {
-  const d = new Date(base);
-  const [h, m] = timeStr.split(":").map(Number);
-  d.setHours(h, m, 0, 0);
-  return d;
-};
-const addMins = (date, mins) => new Date(date.getTime() + mins * 6e4);
-const diffMins = (a, b) => Math.round((b - a) / 6e4);
-const toTimeInput = (date) => {
-  if (!date) return "";
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-};
-const durationLabel = (mins) => {
-  if (mins < 60) return `${mins}m`;
-  return `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? mins % 60 + "m" : ""}`.trim();
-};
-const DEFAULT_SETTINGS = {
-  wakeTime: "07:00",
-  bedTime: "19:30",
-  numNaps: 3,
-  wakeWindowMins: 180,
-  napDurationMins: 35,
-  bedtimeToleranceMins: 60,
-  bridgingNapMins: 20
-};
-const getDB = () => window.firestoreDB || null;
-const fsSet = async (uid, collection, data) => {
-  try {
-    const str = JSON.stringify(data);
-    localStorage.setItem(`lb_${collection}_${uid || "default"}`, str);
-    localStorage.setItem(`lb_${collection}`, str);
-    const db = getDB();
-    if (!db || !uid || uid === "default") return;
-    const ownerUid = localStorage.getItem("lb_data_uid");
-    const writeUid = ownerUid || uid;
-    const payload = { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
-    await db.collection("users").doc(writeUid).collection(collection).doc("data").set(payload);
-    if (ownerUid && ownerUid !== uid) {
-      await db.collection("users").doc(uid).collection(collection).doc("data").set(__spreadProps(__spreadValues({}, payload), { mirroredFrom: ownerUid }));
-    }
-  } catch (e) {
-    console.warn("Firestore write failed:", e.message);
-  }
-};
-const fsGet = async (uid, collection) => {
-  try {
-    const db = getDB();
-    if (db && uid && uid !== "default") {
-      try {
-        const myUid = JSON.parse(localStorage.getItem("lb_user") || "{}").uid || uid;
-        const doc = await db.collection("users").doc(myUid).collection(collection).doc("data").get();
-        if (doc.exists) {
-          const data = JSON.parse(doc.data().value);
-          localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(data));
-          localStorage.setItem(`lb_${collection}`, JSON.stringify(data));
-          return data;
-        }
-      } catch (e) {
-        console.warn("Firestore read failed:", e.message);
-      }
-    }
-    const local = localStorage.getItem(`lb_${collection}_${uid}`) || localStorage.getItem(`lb_${collection}`);
-    return local ? JSON.parse(local) : null;
-  } catch (e) {
-    return null;
-  }
-};
-const fsSetArray = async (uid, collection, arr) => {
-  try {
-    const str = JSON.stringify(arr);
-    localStorage.setItem(`lb_${collection}_${uid || "default"}`, str);
-    localStorage.setItem(`lb_${collection}`, str);
-    const db = getDB();
-    if (!db || !uid || uid === "default") return;
-    const ownerUid = localStorage.getItem("lb_data_uid");
-    const writeUid = ownerUid || uid;
-    const payload = { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
-    await db.collection("users").doc(writeUid).collection(collection).doc("data").set(payload);
-    if (ownerUid && ownerUid !== uid) {
-      await db.collection("users").doc(uid).collection(collection).doc("data").set(__spreadProps(__spreadValues({}, payload), { mirroredFrom: ownerUid }));
-    }
-  } catch (e) {
-    console.warn("Firestore array write failed:", e.message);
-  }
-};
-const archiveDay = async (uid, dateStr, schedule, feeds, sleeps) => {
-  try {
-    const data = { schedule: JSON.stringify(schedule), date: dateStr, archivedAt: (/* @__PURE__ */ new Date()).toISOString() };
-    localStorage.setItem(`lb_archive_${dateStr}`, JSON.stringify(data));
-    const db = getDB();
-    if (!db || !uid || uid === "default") return;
-    const writeUid = localStorage.getItem("lb_data_uid") || uid;
-    await db.collection("users").doc(writeUid).collection("archive").doc(dateStr).set(data);
-  } catch (e) {
-    console.warn("Archive failed:", e.message);
-  }
-};
-const getArchive = async (uid, dateStr) => {
-  try {
-    const local = localStorage.getItem(`lb_archive_${dateStr}`);
-    if (local) {
-      const d = JSON.parse(local);
-      return d.schedule ? JSON.parse(d.schedule) : null;
-    }
-    const db = getDB();
-    if (!db || !uid || uid === "default") return null;
-    const myUid = JSON.parse(localStorage.getItem("lb_user") || "{}").uid || uid;
-    const doc = await db.collection("users").doc(myUid).collection("archive").doc(dateStr).get();
-    if (doc.exists) {
-      const data = doc.data();
-      localStorage.setItem(`lb_archive_${dateStr}`, JSON.stringify(data));
-      return data.schedule ? JSON.parse(data.schedule) : null;
-    }
-  } catch (e) {
-    console.warn("Archive read failed:", e.message);
-  }
-  return null;
-};
-const generateInviteCode = () => {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-};
-const createInvite = async (ownerUid) => {
-  const db = getDB();
-  if (!db || !ownerUid) return null;
-  const code = generateInviteCode();
-  await db.collection("invites").doc(code).set({
-    ownerUid,
-    code,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-    used: false
-  });
-  return code;
-};
-const redeemInvite = async (code, redeemerUid) => {
-  const db = getDB();
-  if (!db) throw new Error("Not connected. Please try again.");
-  const ref = db.collection("invites").doc(code.toUpperCase().trim());
-  const doc = await ref.get();
-  if (!doc.exists) throw new Error("Invalid code. Check and try again.");
-  const invite = doc.data();
-  if (invite.used) throw new Error("This code has already been used.");
-  if (invite.ownerUid === redeemerUid) throw new Error("You can't use your own invite code.");
-  await db.collection("users").doc(redeemerUid).collection("linkedTo").doc("data").set({
-    ownerUid: invite.ownerUid,
-    linkedAt: (/* @__PURE__ */ new Date()).toISOString()
-  });
-  await ref.update({ used: true, usedBy: redeemerUid, usedAt: (/* @__PURE__ */ new Date()).toISOString() });
-  return invite.ownerUid;
-};
-const getLinkedUid = async (uid) => {
-  const db = getDB();
-  if (!db || !uid) return uid;
-  try {
-    const doc = await db.collection("users").doc(uid).collection("linkedTo").doc("data").get();
-    if (doc.exists) return doc.data().ownerUid;
-  } catch (e) {
-  }
-  return uid;
-};
 function OnboardingScreen({ onComplete }) {
   const [step, setStep] = useState(0);
   const [babyName, setBabyName] = useState("");
@@ -1509,21 +1364,12 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   const scheduledNaps = schedule.filter((e) => e.type === "nap");
   const replacedScheduledNapIds = /* @__PURE__ */ new Set();
   const napChainToSlot = /* @__PURE__ */ new Map();
-  compoundNapGroups.forEach((chain) => {
-    if (chain[0].linkedToId) return;
-    const chainStart = new Date(chain[0].start);
-    let best = null, bestDiff = Infinity;
-    scheduledNaps.forEach((sn) => {
-      if (replacedScheduledNapIds.has(sn.id)) return;
-      const diff = Math.abs(new Date(sn.start) - chainStart);
-      if (diff < bestDiff) {
-        bestDiff = diff;
-        best = sn;
-      }
-    });
-    if (best) {
-      replacedScheduledNapIds.add(best.id);
-      napChainToSlot.set(chain[0].id, best.label);
+  const rootChains = compoundNapGroups.filter((chain) => !chain[0].linkedToId).sort((a, b) => new Date(a[0].start) - new Date(b[0].start));
+  rootChains.forEach((chain, idx) => {
+    const slot = scheduledNaps[idx];
+    if (slot) {
+      replacedScheduledNapIds.add(slot.id);
+      napChainToSlot.set(chain[0].id, slot.label);
     }
   });
   const allTimelineItems = [
@@ -1850,18 +1696,6 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         const bedH = (scheduleSettings == null ? void 0 : scheduleSettings.bedTime) ? parseInt(scheduleSettings.bedTime.split(":")[0]) : 19;
         const wakeH = (scheduleSettings == null ? void 0 : scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
         const isNight = h >= bedH || h < wakeH;
-        if (!isNight) {
-          const nextNapIdx = schedule.findIndex(
-            (ev) => ev.type === "nap" && !ev._recorded && new Date(ev.start) > new Date(napStart.getTime() - 60 * 60 * 1e3)
-          );
-          if (nextNapIdx >= 0) {
-            const dur = diffMins(new Date(schedule[nextNapIdx].start), new Date(schedule[nextNapIdx].end));
-            const updated = schedule.map(
-              (ev, i) => i === nextNapIdx ? __spreadProps(__spreadValues({}, ev), { start: napStart, end: addMins(napStart, dur) }) : ev
-            );
-            onUpdateSchedule(rebuildFromIndex(updated, nextNapIdx, scheduleSettings));
-          }
-        }
       },
       onSaveNap: (napStart, napEnd, linkedToId, napLocation) => {
         const napId = Date.now();
