@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/revans/Documents/Github/lullabyte && git diff --quiet HEAD -- index.html || (git add index.html && git commit -m \"update index.html [$(date '+%Y-%m-%d %H:%M')]\" && git push origin main) 2>/dev/null || true",
+            "statusMessage": "Syncing index.html to GitHub..."
+          }
+        ]
+      }
     ]
   }
 }

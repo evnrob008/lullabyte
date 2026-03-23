@@ -1090,6 +1090,7 @@ function NapLogModal({ todaySleeps, schedule, scheduleSettings, activeSleep, onS
   const [startTime, setStartTime] = useState(toTimeInput(/* @__PURE__ */ new Date()));
   const [endTime, setEndTime] = useState("");
   const [linked, setLinked] = useState(false);
+  const [location, setLocation] = useState("");
   const lastNap = todaySleeps.filter((s) => !s.isNight).slice(-1)[0] || null;
   const inp = {
     width: "100%",
@@ -1469,7 +1470,9 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     }).reduce((sum, s) => sum + diffMins(new Date(s.start), new Date(s.end)), 0);
     const activeNapMins = activeSleep ? diffMins(activeSleep.start, now2) : 0;
     const totalNapMins = completedNapMins + activeNapMins;
+    const todayDateStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const totalFeedMl = feeds.filter((f) => {
+      if (f.date) return f.date === todayDateStr;
       const d = strToDate(f.time);
       return d >= midnight;
     }).reduce((sum, f) => {
@@ -1552,7 +1555,16 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       onUpdateStart: (newStart) => setActiveSleep((prev) => __spreadProps(__spreadValues({}, prev), { start: newStart })),
       onEnd: (napStart, napEnd, linkedToId) => {
         const napId = Date.now();
-        onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: false, linkedToId: linkedToId || null });
+        const endH = new Date(napEnd).getHours();
+        const startH = new Date(napStart).getHours();
+        const bedH2 = (scheduleSettings == null ? void 0 : scheduleSettings.bedTime) ? parseInt(scheduleSettings.bedTime.split(":")[0]) : 19;
+        const wakeH2 = (scheduleSettings == null ? void 0 : scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
+        const isNightTimer = startH >= bedH2 || startH < wakeH2;
+        onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: isNightTimer, linkedToId: linkedToId || null });
+        if (isNightTimer) {
+          setActiveSleep(null);
+          return;
+        }
         if (linkedToId) {
           const allNapSleeps = [...todaySleeps, { id: napId, start: napStart, end: napEnd, linkedToId }];
           let rootId = linkedToId;
