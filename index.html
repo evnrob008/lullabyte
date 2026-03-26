@@ -458,10 +458,10 @@ const redeemInvite = async (code, redeemerUid) => {
   const doc = await ref.get();
   if (!doc.exists) throw new Error("Invalid code. Check and try again.");
   const invite = doc.data();
-  if (invite.used) throw new Error("This code has already been used.");
+  // Codes can be reused on multiple devices
   if (invite.ownerUid === redeemerUid) throw new Error("You can't use your own invite code.");
   await db.collection("users").doc(redeemerUid).collection("linkedTo").doc("data").set({ ownerUid: invite.ownerUid, linkedAt: (/* @__PURE__ */ new Date()).toISOString() });
-  await ref.update({ used: true, usedBy: redeemerUid, usedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  await ref.update({ lastUsedBy: redeemerUid, lastUsedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return invite.ownerUid;
 };
 const getLinkedUid = async (uid) => {
@@ -1143,7 +1143,6 @@ function InviteModal({ onClose, user, initialCode, onRedeemed }) {
             if (doc.exists) {
               const val = doc.data().value;
               localStorage.setItem(`lb_${col}_${uid}`, val);
-              localStorage.setItem(`lb_${col}`, val);
               await db.collection("users").doc(uid).collection(col).doc("data").set({
                 value: val,
                 mirroredFrom: ownerUid,
@@ -2391,7 +2390,8 @@ function App() {
     const uid = u.uid || u.email || "default";
     setUser(u);
     const cachedDataUid = localStorage.getItem("lb_data_uid");
-    const dataUid = cachedDataUid || await getLinkedUid(uid);
+    const linkedUid = await getLinkedUid(uid);
+    const dataUid = (linkedUid && linkedUid !== uid) ? linkedUid : (cachedDataUid || uid);
     if (dataUid !== uid) localStorage.setItem("lb_data_uid", dataUid);
     const [baby, settings, schedule2, feeds2, sleeps2] = await Promise.all([
       fsGet(dataUid, "baby"),
