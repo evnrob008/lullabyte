@@ -374,8 +374,7 @@ const fsGet = async (uid, collection) => {
     const db = getDB();
     if (db && uid && uid !== "default") {
       try {
-        const myUid = JSON.parse(localStorage.getItem("lb_user") || "{}").uid || uid;
-        const doc = await db.collection("users").doc(myUid).collection(collection).doc("data").get();
+        const doc = await db.collection("users").doc(uid).collection(collection).doc("data").get();
         if (doc.exists) {
           const data = JSON.parse(doc.data().value);
           localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(data));
@@ -431,8 +430,7 @@ const getArchive = async (uid, dateStr) => {
     }
     const db = getDB();
     if (!db || !uid || uid === "default") return null;
-    const myUid = JSON.parse(localStorage.getItem("lb_user") || "{}").uid || uid;
-    const doc = await db.collection("users").doc(myUid).collection("archive").doc(dateStr).get();
+    const doc = await db.collection("users").doc(uid).collection("archive").doc(dateStr).get();
     if (doc.exists) {
       const data = doc.data();
       localStorage.setItem(`lb_archive_${dateStr}`, JSON.stringify(data));
