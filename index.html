@@ -1130,34 +1130,11 @@ function InviteModal({ onClose, user, initialCode, onRedeemed }) {
     try {
       const uid = user == null ? void 0 : user.uid;
       if (!uid) throw new Error("You need a full account to link with a partner.");
-      const ownerUid = await redeemInvite(code, uid);
+      const ownerUid = await redeemInvite(code.toUpperCase().trim(), uid);
       localStorage.setItem("lb_data_uid", ownerUid);
-      const db = window.firestoreDB;
-      if (db) {
-        const collections = ["baby", "settings", "schedule", "feeds", "sleeps"];
-        await Promise.all(collections.map(async (col) => {
-          try {
-            const doc = await db.collection("users").doc(ownerUid).collection(col).doc("data").get();
-            if (doc.exists) {
-              const val = doc.data().value;
-              localStorage.setItem(`lb_${col}_${uid}`, val);
-              await db.collection("users").doc(uid).collection(col).doc("data").set({
-                value: val,
-                mirroredFrom: ownerUid,
-                updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-              });
-            }
-          } catch (e) {
-            console.warn("Could not copy data for", col, e);
-          }
-        }));
-      }
       setRedeemSuccess(true);
       if (onRedeemed) onRedeemed();
-      setTimeout(() => {
-        onClose();
-        window.location.reload();
-      }, 1500);
+      setTimeout(() => { onClose(); window.location.reload(); }, 1200);
     } catch (e) {
       setRedeemError(e.message);
     }
@@ -2387,10 +2364,12 @@ function App() {
     localStorage.setItem("lb_user", JSON.stringify(u));
     const uid = u.uid || u.email || "default";
     setUser(u);
-    const cachedDataUid = localStorage.getItem("lb_data_uid");
+    // Resolve dataUid: Firestore link takes priority, then cached, then own uid
     const linkedUid = await getLinkedUid(uid);
-    const dataUid = (linkedUid && linkedUid !== uid) ? linkedUid : (cachedDataUid || uid);
+    const cachedDataUid = localStorage.getItem("lb_data_uid");
+    const dataUid = (linkedUid && linkedUid !== uid) ? linkedUid : (cachedDataUid && cachedDataUid !== uid ? cachedDataUid : uid);
     if (dataUid !== uid) localStorage.setItem("lb_data_uid", dataUid);
+    // Read directly from owner's Firestore path (security rules allow partner access)
     const [baby, settings, schedule2, feeds2, sleeps2] = await Promise.all([
       fsGet(dataUid, "baby"),
       fsGet(dataUid, "settings"),
@@ -2398,7 +2377,6 @@ function App() {
       fsGet(dataUid, "feeds"),
       fsGet(dataUid, "sleeps")
     ]);
-    if (dataUid !== uid) localStorage.setItem("lb_data_uid", dataUid);
     if (baby) setBabyProfile(baby);
     if (settings) {
       setScheduleSettings(settings);
