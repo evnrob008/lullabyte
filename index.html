@@ -375,6 +375,7 @@ const fsGet = async (uid, collection) => {
     if (db && uid && uid !== "default") {
       try {
         const doc = await db.collection("users").doc(uid).collection(collection).doc("data").get();
+        console.log(`📖 fsGet ${collection} from ${uid}:`, doc.exists ? "found" : "not found");
         if (doc.exists) {
           const data = JSON.parse(doc.data().value);
           localStorage.setItem(`lb_${collection}_${uid}`, JSON.stringify(data));
@@ -382,10 +383,11 @@ const fsGet = async (uid, collection) => {
           return data;
         }
       } catch (e) {
-        console.warn("Firestore read failed:", e.message);
+        console.warn("Firestore read failed:", collection, e.message);
       }
     }
     const local = localStorage.getItem(`lb_${collection}_${uid}`) || localStorage.getItem(`lb_${collection}`);
+    console.log(`💾 fsGet ${collection} from localStorage:`, local ? "found" : "not found");
     return local ? JSON.parse(local) : null;
   } catch (e) {
     return null;
@@ -467,8 +469,10 @@ const getLinkedUid = async (uid) => {
   if (!db || !uid) return uid;
   try {
     const doc = await db.collection("users").doc(uid).collection("linkedTo").doc("data").get();
+    console.log("🔍 getLinkedUid:", uid, "->", doc.exists ? doc.data().ownerUid : "not linked");
     if (doc.exists) return doc.data().ownerUid;
   } catch (e) {
+    console.warn("getLinkedUid error:", e.message);
   }
   return uid;
 };
@@ -477,6 +481,7 @@ function OnboardingScreen({ onComplete }) {
   const [babyName, setBabyName] = useState("");
   const [gender, setGender] = useState("");
   const [dob, setDob] = useState("");
+  const [ageMonths, setAgeMonths] = useState("");
   const [s, setS] = useState(__spreadValues({}, DEFAULT_SETTINGS));
   const [raw, setRaw] = useState({});
   const inp = {
@@ -1131,6 +1136,7 @@ function InviteModal({ onClose, user, initialCode, onRedeemed }) {
       const uid = user == null ? void 0 : user.uid;
       if (!uid) throw new Error("You need a full account to link with a partner.");
       const ownerUid = await redeemInvite(code.toUpperCase().trim(), uid);
+      console.log("✅ redeemInvite success:", { partnerUid: uid, ownerUid });
       localStorage.setItem("lb_data_uid", ownerUid);
       setRedeemSuccess(true);
       if (onRedeemed) onRedeemed();
@@ -2368,6 +2374,7 @@ function App() {
     const linkedUid = await getLinkedUid(uid);
     const cachedDataUid = localStorage.getItem("lb_data_uid");
     const dataUid = (linkedUid && linkedUid !== uid) ? linkedUid : (cachedDataUid && cachedDataUid !== uid ? cachedDataUid : uid);
+    console.log("🔗 handleAuth:", { uid, linkedUid, cachedDataUid, dataUid });
     if (dataUid !== uid) localStorage.setItem("lb_data_uid", dataUid);
     // Read directly from owner's Firestore path (security rules allow partner access)
     const [baby, settings, schedule2, feeds2, sleeps2] = await Promise.all([
@@ -2377,6 +2384,7 @@ function App() {
       fsGet(dataUid, "feeds"),
       fsGet(dataUid, "sleeps")
     ]);
+    console.log("📦 loaded:", { baby: !!baby, settings: !!settings, schedule: schedule2?.length, feeds: feeds2?.length, sleeps: sleeps2?.length });
     if (baby) setBabyProfile(baby);
     if (settings) {
       setScheduleSettings(settings);
@@ -2529,7 +2537,12 @@ function App() {
   }), []);
   if (authLoading) return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 72 }), /* @__PURE__ */ React.createElement("div", { style: { width: 32, height: 32, border: `3px solid ${PAL.border}`, borderTopColor: PAL.primary, borderRadius: "50%", animation: "spin 0.8s linear infinite" } }));
   if (!user) return /* @__PURE__ */ React.createElement(AuthScreen, { onAuth: handleAuth, pendingInviteCode });
-  if (!babyProfile) return /* @__PURE__ */ React.createElement(OnboardingScreen, { onComplete: handleOnboardingComplete });
+  // If linked as partner and babyProfile hasn't loaded yet, show spinner not onboarding
+  const isLinkedPartner = !!localStorage.getItem("lb_data_uid") && localStorage.getItem("lb_data_uid") !== (user.uid || user.email);
+  if (!babyProfile) {
+    if (isLinkedPartner) return /* @__PURE__ */ React.createElement("div", { style: { minHeight: "100vh", background: PAL.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 } }, /* @__PURE__ */ React.createElement(AppLogo, { size: 72 }), /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, fontSize: 14 } }, "Loading partner account\u2026"), /* @__PURE__ */ React.createElement("div", { style: { width: 32, height: 32, border: `3px solid ${PAL.border}`, borderTopColor: PAL.primary, borderRadius: "50%", animation: "spin 0.8s linear infinite" } }));
+    return /* @__PURE__ */ React.createElement(OnboardingScreen, { onComplete: handleOnboardingComplete });
+  }
   const tabs = [
     { id: "schedule", icon: "\u{1F4C5}", label: "Schedule" },
     { id: "summary", icon: "\u{1F4CA}", label: "History" },
