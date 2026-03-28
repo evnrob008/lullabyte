@@ -1597,20 +1597,27 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   const allTimelineItems = [
     // Include scheduled events EXCEPT naps that have been replaced by a logged nap
     // AND except wake windows from original schedule when rebuild created new ones (avoid duplicates)
-    ...(() => { try { console.log("🔍 schedule:", schedule.map(e=>e.id)); } catch(x){} return []; })(),
     ...schedule.map((e) => __spreadProps(__spreadValues({}, e), { kind: "scheduled" })).filter((e) => {
       if (e.type === "nap" && replacedScheduledNapIds.has(e.id)) return false;
-      const firstRebuilt = schedule.find((s) => s.id && s.id.startsWith("wake-r-"));
-      if (firstRebuilt) {
-        const rebuildStart = new Date(firstRebuilt.start);
+      const rebuiltWWs = schedule.filter((s) => s.id && s.id.startsWith("wake-r-"));
+      if (rebuiltWWs.length > 0) {
+        const rebuildStart = new Date(rebuiltWWs[0].start);
+        // Drop original (non-rebuilt) wake windows after rebuild point
         if (e.type === "wake" && e.id !== "wake-0" && !e.id.startsWith("wake-r-") && e.id !== "wake-final") {
           if (new Date(e.start) >= rebuildStart) return false;
         }
+        // Drop unlogged naps after rebuild point ONLY if they are NOT between two wake-r- items
         if (e.type === "nap" && !e._recorded && !e.id.startsWith("nap-r-")) {
-          if (new Date(e.start) >= rebuildStart) return false;
+          if (new Date(e.start) >= rebuildStart) {
+            // Check if this nap sits between two wake-r- items in the schedule (keep it if so)
+            const eIdx = schedule.findIndex(s => s.id === e.id);
+            const prevIsRebuiltWW = schedule.slice(0, eIdx).reverse().find(s => s.type === "wake");
+            const nextIsRebuiltWW = schedule.slice(eIdx + 1).find(s => s.type === "wake");
+            const isBetweenRebuilt = (prevIsRebuiltWW && prevIsRebuiltWW.id.startsWith("wake-r-")) ||
+                                     (nextIsRebuiltWW && nextIsRebuiltWW.id.startsWith("wake-r-"));
+            if (!isBetweenRebuilt) return false;
+          }
         }
-        // Always keep rebuilt nap slots (nap-r-*)
-        if (e.type === "nap" && e.id.startsWith("nap-r-")) return true;
       }
       return true;
     }),
@@ -1707,7 +1714,6 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   });
   let napCounter = 0;
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
-  console.log("📋", allTimelineItems.map(e => e.id + "|" + e.kind + "|" + (e.start ? new Date(e.start).toTimeString().slice(0,5) : "?") + "-" + (e.end ? new Date(e.end).toTimeString().slice(0,5) : "?")));
   allTimelineItems.forEach((ev) => {
     if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
       napCounter++;
