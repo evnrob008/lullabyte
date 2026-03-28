@@ -5,7 +5,8 @@
       "Bash(git push:*)",
       "Bash(git add:*)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(node --check index.html)"
     ]
   },
   "hooks": {
