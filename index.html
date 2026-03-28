@@ -1597,6 +1597,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   const allTimelineItems = [
     // Include scheduled events EXCEPT naps that have been replaced by a logged nap
     // AND except wake windows from original schedule when rebuild created new ones (avoid duplicates)
+    ...(() => { try { console.log("🔍 schedule:", schedule.map(e=>e.id)); } catch(x){} return []; })(),
     ...schedule.map((e) => __spreadProps(__spreadValues({}, e), { kind: "scheduled" })).filter((e) => {
       if (e.type === "nap" && replacedScheduledNapIds.has(e.id)) return false;
       const firstRebuilt = schedule.find((s) => s.id && s.id.startsWith("wake-r-"));
@@ -1705,8 +1706,8 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     }
   });
   let napCounter = 0;
-  // Re-sort after post-processing since we mutated start times
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
+  console.log("📋", allTimelineItems.map(e => e.id + "|" + e.kind + "|" + (e.start ? new Date(e.start).toTimeString().slice(0,5) : "?") + "-" + (e.end ? new Date(e.end).toTimeString().slice(0,5) : "?")));
   allTimelineItems.forEach((ev) => {
     if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
       napCounter++;
