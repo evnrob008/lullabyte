@@ -1608,6 +1608,8 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         if (e.type === "nap" && !e._recorded && !e.id.startsWith("nap-r-")) {
           if (new Date(e.start) >= rebuildStart) return false;
         }
+        // Always keep rebuilt nap slots (nap-r-*)
+        if (e.type === "nap" && e.id.startsWith("nap-r-")) return true;
       }
       return true;
     }),
@@ -1705,7 +1707,6 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   let napCounter = 0;
   // Re-sort after post-processing since we mutated start times
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
-  console.log("📋 allTimelineItems:", allTimelineItems.map(e => e.id + " " + e.kind + " " + (e.start ? new Date(e.start).toTimeString().slice(0,5) : "?") + "-" + (e.end ? new Date(e.end).toTimeString().slice(0,5) : "?")));
   allTimelineItems.forEach((ev) => {
     if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
       napCounter++;
