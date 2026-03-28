@@ -1905,16 +1905,16 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         style: {
           flex: 1,
           borderRadius: 14,
-          padding: (isPast && !expandedPastEvents.has(ev.id)) ? "5px 14px" : isFuture ? "5px 14px" : "12px 14px",
-          cursor: isPast || (isScheduled && ev.editable) ? "pointer" : "default",
+          padding: (isPast && !expandedPastEvents.has(ev.id)) ? "5px 14px" : (isFuture && !expandedPastEvents.has(ev.id)) ? "5px 14px" : "12px 14px",
+          cursor: isPast || isFuture || (isScheduled && ev.editable) ? "pointer" : "default",
           background: isLive ? c.dot + "44" : isPast ? "#F0EDEA" : c.bg,
           border: isLive ? `3px solid ${c.dot}` : isPast ? "1px solid #DDD8D3" : `1.5px solid ${c.dot}22`,
           opacity: isPast ? 0.7 : 1,
           transition: "all 0.3s"
         },
-        onClick: () => { if (isPast) { setExpandedPastEvents((prev) => { const next = new Set(prev); if (next.has(ev.id)) next.delete(ev.id); else next.add(ev.id); return next; }); } else if (isScheduled && ev.editable) { setEditEvent(ev); } }
+        onClick: () => { if (isPast || isFuture) { setExpandedPastEvents((prev) => { const next = new Set(prev); if (next.has(ev.id)) next.delete(ev.id); else next.add(ev.id); return next; }); } else if (isScheduled && ev.editable) { setEditEvent(ev); } }
       },
-      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : (isPast && !expandedPastEvents.has(ev.id)) ? 400 : isFuture ? 500 : 700, fontSize: isLive ? 15 : (isPast && !expandedPastEvents.has(ev.id)) || isFuture ? 13 : 14, color: (isPast && !expandedPastEvents.has(ev.id)) ? PAL.muted : isFuture ? PAL.muted : PAL.text } }, ev.label), ((isPast && !expandedPastEvents.has(ev.id)) || isFuture) && ev.type === "wake" && ev.id !== "wake-0" && (() => { const _s = new Date(ev.start); const _nxt = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap"); const _e = _nxt ? new Date(_nxt.start) : new Date(864e13); const _fs = bottleFeeds.filter((f) => { const t = strToDate(f.time); return t >= _s && t < _e; }); if (!_fs.length) return null; const icons = _fs.map((f) => f.type === "solids" ? "\uD83E\uDD44" : "\uD83C\uDF7C"); return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, marginLeft: 2, opacity: 0.7 } }, icons.join("")); })(), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, (() => {
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : (isPast && !expandedPastEvents.has(ev.id)) ? 400 : (isFuture && !expandedPastEvents.has(ev.id)) ? 500 : 700, fontSize: isLive ? 15 : (isPast && !expandedPastEvents.has(ev.id)) || (isFuture && !expandedPastEvents.has(ev.id)) ? 13 : 14, color: (isPast && !expandedPastEvents.has(ev.id)) ? PAL.muted : (isFuture && !expandedPastEvents.has(ev.id)) ? PAL.muted : PAL.text } }, ev.label), ((isPast && !expandedPastEvents.has(ev.id)) || (isFuture && !expandedPastEvents.has(ev.id))) && ev.type === "wake" && ev.id !== "wake-0" && (() => { const _s = new Date(ev.start); const _nxt = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap"); const _e = _nxt ? new Date(_nxt.start) : new Date(864e13); const _fs = bottleFeeds.filter((f) => { const t = strToDate(f.time); return t >= _s && t < _e; }); if (!_fs.length) return null; const icons = _fs.map((f) => f.type === "solids" ? "\uD83E\uDD44" : "\uD83C\uDF7C"); return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, marginLeft: 2, opacity: 0.7 } }, icons.join("")); })(), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, (() => {
         let startTime = new Date(ev.start);
         if (ev.type === "wake" && ev.id !== "wake-0") {
           const prevEv = allTimelineItems.slice(0, i).reverse().find((e) => e.kind !== "orphanFeed" && e.kind !== "nightSleep" && e.kind !== "nowDivider");
@@ -1928,13 +1928,13 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         }
         const showTimes = ev.type === "nap" && ev.end || ev.type === "wake" && ev.id !== "wake-0" && endTime;
         // Collapsed for past events and future events - just show duration or start time
-        if ((isPast && !expandedPastEvents.has(ev.id)) || isFuture) { const d2 = showTimes && endTime ? durationLabel(diffMins(startTime, endTime)) : null; return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, d2 || fmt12(startTime)); }
+        if ((isPast && !expandedPastEvents.has(ev.id)) || (isFuture && !expandedPastEvents.has(ev.id))) { const d2 = showTimes && endTime ? durationLabel(diffMins(startTime, endTime)) : null; return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, d2 || fmt12(startTime)); }
         if (!showTimes) {
           return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, color: PAL.muted } }, fmt12(startTime));
         }
         const dur = endTime ? diffMins(startTime, endTime) : 0;
         return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Start: ", fmt12(startTime)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "End: ", fmt12(endTime)), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, "Duration: ", durationLabel(dur)));
-      })(), isScheduled && ev.editable && (!isPast || expandedPastEvents.has(ev.id)) && !isFuture && /* @__PURE__ */ React.createElement("span", { onClick: (e) => { e.stopPropagation(); if (isScheduled && ev.editable) setEditEvent(ev); }, style: { fontSize: 11, color: PAL.primary, marginTop: 2, cursor: "pointer" } }, "\u270F\uFE0F")), ev.type === "wake" && ev.id !== "wake-0" && (() => {
+      })(), isScheduled && ev.editable && (!isPast || expandedPastEvents.has(ev.id)) && (!isFuture || expandedPastEvents.has(ev.id)) && /* @__PURE__ */ React.createElement("span", { onClick: (e) => { e.stopPropagation(); if (isScheduled && ev.editable) setEditEvent(ev); }, style: { fontSize: 11, color: PAL.primary, marginTop: 2, cursor: "pointer" } }, "\u270F\uFE0F")), ev.type === "wake" && ev.id !== "wake-0" && (() => {
         const wwStart = new Date(ev.start);
         const nextNapEv = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap");
         const wwEnd = nextNapEv ? new Date(nextNapEv.start) : /* @__PURE__ */ new Date(864e13);
@@ -1944,7 +1944,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         });
         if (!feedsInWindow.length) return null;
         if (isPast && !expandedPastEvents.has(ev.id)) return null;
-        if (isFuture) return null;
+        if (isFuture && !expandedPastEvents.has(ev.id)) return null;
         return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginTop: 8 } }, feedsInWindow.map((f) => /* @__PURE__ */ React.createElement(FeedChip, { key: f.id, f, onEdit: () => setEditFeed(f) })));
       })()))
     )))
