@@ -1674,16 +1674,13 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       if (ev.end) lastNapEnd = new Date(ev.end);
     } else if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0") {
       if (lastNapEnd) ev.start = new Date(lastNapEnd);
-      // End = next actual nap start, or start + ww
-      // (will be set after we know next nap start — handled in next sub-pass)
     } else if (ev.kind === "scheduled" && ev.type === "nap" && !ev._recorded) {
-      // Unlogged nap: start = prev ww end (= lastNapEnd + ww)
       if (lastNapEnd) {
         const newStart = addMins(new Date(lastNapEnd), ww);
-        const dur = ev.end ? diffMins(new Date(ev.start), new Date(ev.end)) : napDur;
+        const dur = napDur;
         ev.start = newStart;
         ev.end = addMins(newStart, dur);
-        lastNapEnd = null; // reset so next WW doesn't re-use this
+        lastNapEnd = new Date(ev.end); // carry forward so next WW starts correctly
       }
     }
   });
