@@ -1704,6 +1704,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       }
     }
   });
+  let napCounter = 0;
   allTimelineItems.forEach((ev) => {
     if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
       napCounter++;
