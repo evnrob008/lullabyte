@@ -1806,20 +1806,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         setActiveSleep(null);
       }
     }
-  ) : /* @__PURE__ */ React.createElement(React.Fragment, null, (() => {
-    const overdueNap = schedule.find(
-      (ev) => ev.type === "nap" && !ev._recorded && new Date(ev.start) <= now
-    );
-    if (!overdueNap) return null;
-    return /* @__PURE__ */ React.createElement("div", { style: { background: PAL.sleepLight, border: `1.5px solid ${PAL.sleep}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: PAL.text } }, "\u{1F4A4} Has ", overdueNap.label, " started?"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, "Scheduled ", fmt12(new Date(overdueNap.start)))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setShowNapModal(true), style: { padding: "8px 14px", borderRadius: 9, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "Yes"), /* @__PURE__ */ React.createElement("button", { onClick: () => {
-      const idx = schedule.findIndex((e) => e.id === overdueNap.id);
-      if (idx >= 0) {
-        const dur = diffMins(new Date(overdueNap.start), new Date(overdueNap.end));
-        const updated = schedule.map((e, i) => i === idx ? __spreadProps(__spreadValues({}, e), { start: /* @__PURE__ */ new Date(), end: addMins(/* @__PURE__ */ new Date(), dur) }) : e);
-        onUpdateSchedule(rebuildFromIndex(updated, idx, scheduleSettings));
-      }
-    }, style: { padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "Not yet")));
-  })(), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setShowNapModal(true), style: { flex: 1, padding: "10px", borderRadius: 12, border: `1.5px dashed ${PAL.sleep}`, background: "transparent", color: PAL.sleep, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u{1F4A4} Log Nap"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowFeedModal(true), style: { flex: 1, padding: "10px", borderRadius: 12, border: `1.5px dashed ${PAL.feed}`, background: "transparent", color: PAL.feed, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u{1F37C} Log Feed"))), schedule.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "40px 20px", color: PAL.muted } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1F4C5}"), /* @__PURE__ */ React.createElement("p", { style: { margin: 0, fontSize: 15 } }, "No schedule yet.", /* @__PURE__ */ React.createElement("br", null), "Tap \u2699\uFE0F Settings to create one.")) : /* @__PURE__ */ React.createElement("div", { style: { position: "relative", overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
+  ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setShowNapModal(true), style: { flex: 1, padding: "10px", borderRadius: 12, border: `1.5px dashed ${PAL.sleep}`, background: "transparent", color: PAL.sleep, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u{1F4A4} Log Nap"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowFeedModal(true), style: { flex: 1, padding: "10px", borderRadius: 12, border: `1.5px dashed ${PAL.feed}`, background: "transparent", color: PAL.feed, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u{1F37C} Log Feed"))), schedule.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "40px 20px", color: PAL.muted } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1F4C5}"), /* @__PURE__ */ React.createElement("p", { style: { margin: 0, fontSize: 15 } }, "No schedule yet.", /* @__PURE__ */ React.createElement("br", null), "Tap \u2699\uFE0F Settings to create one.")) : /* @__PURE__ */ React.createElement("div", { style: { position: "relative", overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
     position: "absolute",
     position: "absolute", left: 22, top: 0, bottom: 0, width: 2, borderRadius: 1,
       background: PAL.border
@@ -2426,6 +2413,19 @@ function App() {
     } else {
       localStorage.removeItem("lb_active_sleep");
     }
+    // Sync active sleep timer to Firestore so partner sees it live
+    const db = window.firestoreDB;
+    if (!db) return;
+    const dataUid = localStorage.getItem("lb_data_uid");
+    const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    const uid = dataUid || u.uid || u.email;
+    if (!uid || uid === "default") return;
+    const ref = db.collection("users").doc(uid).collection("activeSleep").doc("data");
+    if (activeSleep) {
+      ref.set({ ...activeSleep, start: activeSleep.start instanceof Date ? activeSleep.start.toISOString() : activeSleep.start }).catch(() => {});
+    } else {
+      ref.delete().catch(() => {});
+    }
   }, [activeSleep]);
   const handleUpdateBabyProfile = useCallback(async (updated) => {
     setBabyProfile(updated);
@@ -2433,6 +2433,64 @@ function App() {
     const uid = localStorage.getItem("lb_data_uid") || u.uid || u.email || "default";
     await fsSet(uid, "baby", updated);
   }, []);
+
+  // Real-time listener — keeps both partners in sync
+  useEffect(() => {
+    const db = window.firestoreDB;
+    if (!db) return;
+    const dataUid = localStorage.getItem("lb_data_uid");
+    const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
+    const uid = dataUid || u.uid || u.email;
+    if (!uid || uid === "default") return;
+    const unsubs = [];
+    // Listen for sleeps changes (covers nap timer start/end)
+    unsubs.push(db.collection("users").doc(uid).collection("sleeps").doc("data").onSnapshot((doc) => {
+      if (doc.exists) {
+        try {
+          const data = JSON.parse(doc.data().value);
+          setSleeps(data);
+          localStorage.setItem(`lb_sleeps_${uid}`, JSON.stringify(data));
+        } catch (e) {}
+      }
+    }));
+    // Listen for feeds changes
+    unsubs.push(db.collection("users").doc(uid).collection("feeds").doc("data").onSnapshot((doc) => {
+      if (doc.exists) {
+        try {
+          const data = JSON.parse(doc.data().value);
+          setFeeds(data);
+          localStorage.setItem(`lb_feeds_${uid}`, JSON.stringify(data));
+        } catch (e) {}
+      }
+    }));
+    // Listen for schedule changes
+    unsubs.push(db.collection("users").doc(uid).collection("schedule").doc("data").onSnapshot((doc) => {
+      if (doc.exists) {
+        try {
+          const data = JSON.parse(doc.data().value);
+          const parsed = data.map((e) => ({ ...e, start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null }));
+          setSchedule(parsed);
+          localStorage.setItem(`lb_schedule_${uid}`, JSON.stringify(data));
+        } catch (e) {}
+      }
+    }));
+    // Listen for active sleep timer (partner starting/stopping a nap)
+    unsubs.push(db.collection("users").doc(uid).collection("activeSleep").doc("data").onSnapshot((doc) => {
+      if (doc.exists) {
+        try {
+          const data = doc.data();
+          if (data && data.start) {
+            setActiveSleep({ ...data, start: new Date(data.start) });
+          } else {
+            setActiveSleep(null);
+          }
+        } catch (e) {}
+      } else {
+        setActiveSleep(null);
+      }
+    }));
+    return () => unsubs.forEach((u2) => u2());
+  }, [user]);
   const handleLogout = useCallback(async () => {
     localStorage.removeItem("lb_user");
     try {
