@@ -1635,6 +1635,16 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       return { id: `orphan-feed-${f.id}`, kind: "orphanFeed", type: "feed", start: strToDate(f.time), raw: f };
     })
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
+  // Fix wake window end times: each scheduled wake window's end must equal
+  // the start of whatever nap (actual or scheduled) immediately follows it
+  allTimelineItems.forEach((ev, i) => {
+    if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0") {
+      const nextNap = allTimelineItems.slice(i + 1).find((e) =>
+        e.kind === "actualNap" || e.kind === "compoundNap" || (e.kind === "scheduled" && e.type === "nap")
+      );
+      if (nextNap) ev.end = new Date(nextNap.start);
+    }
+  });
    let napCounter = 0;
   allTimelineItems.forEach((ev) => {
     if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
