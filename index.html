@@ -1598,8 +1598,6 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     // AND except wake windows from original schedule when rebuild created new ones (avoid duplicates)
     ...schedule.map((e) => __spreadProps(__spreadValues({}, e), { kind: "scheduled" })).filter((e) => {
       if (e.type === "nap" && replacedScheduledNapIds.has(e.id)) return false;
-      // If rebuild has created new items (wake-r-*), drop original wake windows and nap
-      // slots that fall at or after the first rebuilt position (they've been superseded)
       const firstRebuilt = schedule.find((s) => s.id && s.id.startsWith("wake-r-"));
       if (firstRebuilt) {
         const rebuildStart = new Date(firstRebuilt.start);
@@ -1651,18 +1649,34 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       return { id: `orphan-feed-${f.id}`, kind: "orphanFeed", type: "feed", start: strToDate(f.time), raw: f };
     })
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
-  // Fix wake window end times: only cap at actual logged nap start, not scheduled unlogged ones
+  // Post-process: fix scheduled nap end/start times from actual todaySleeps,
+  // and fix wake window end times based on actual nap data
+  const ww = (scheduleSettings && scheduleSettings.wakeWindowMins) || 180;
+  allTimelineItems.forEach((ev, i) => {
+    // Fix scheduled nap times from actual recorded sleep
+    if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded) {
+      const actualSleep = todaySleeps.filter(s => !s.isNight).find(s =>
+        Math.abs(new Date(s.start) - new Date(ev.start)) < 4 * 60 * 60 * 1e3
+      );
+      if (actualSleep) {
+        ev.start = new Date(actualSleep.start);
+        if (actualSleep.end) ev.end = new Date(actualSleep.end);
+      }
+    }
+  });
+  // Second pass: fix wake window start and end times based on corrected nap times
   allTimelineItems.forEach((ev, i) => {
     if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0") {
-      // Only update end if an actual logged nap follows (not just a scheduled placeholder)
-      const nextActualNap = allTimelineItems.slice(i + 1).find((e) =>
+      const prevNap = allTimelineItems.slice(0, i).reverse().find(e =>
+        e.type === "nap" && (e.kind === "actualNap" || e.kind === "compoundNap" || (e.kind === "scheduled" && e._recorded))
+      );
+      if (prevNap && prevNap.end) ev.start = new Date(prevNap.end);
+      const nextActualNap = allTimelineItems.slice(i + 1).find(e =>
         e.kind === "actualNap" || e.kind === "compoundNap"
       );
       if (nextActualNap) {
         ev.end = new Date(nextActualNap.start);
-      } else if (ev.end) {
-        // No logged nap follows - ensure end = start + wakeWindowMins
-        const ww = scheduleSettings && scheduleSettings.wakeWindowMins || 180;
+      } else {
         ev.end = addMins(new Date(ev.start), ww);
       }
     }
