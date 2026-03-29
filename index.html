@@ -2417,6 +2417,7 @@ function App() {
     };
     setTimeout(tryRestore, 1500);
   }, []);
+  const [dataUid, setDataUid] = useState(() => localStorage.getItem("lb_data_uid") || null);
   const [feeds, setFeeds] = useState(() => {
     try {
       const f = localStorage.getItem("lb_feeds");
@@ -2486,6 +2487,7 @@ function App() {
     const dataUid = (linkedUid && linkedUid !== uid) ? linkedUid : (cachedDataUid && cachedDataUid !== uid ? cachedDataUid : uid);
     console.log("🔗 handleAuth:", { uid, linkedUid, cachedDataUid, dataUid });
     if (dataUid !== uid) localStorage.setItem("lb_data_uid", dataUid);
+    setDataUid(dataUid);
     // Read directly from owner's Firestore path (security rules allow partner access)
     const [baby, settings, schedule2, feeds2, sleeps2, moods2] = await Promise.all([
       fsGet(dataUid, "baby"),
@@ -2541,7 +2543,6 @@ function App() {
     // Sync active sleep timer to Firestore so partner sees it live
     const db = window.firestoreDB;
     if (!db) return;
-    const dataUid = localStorage.getItem("lb_data_uid");
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
     const uid = dataUid || u.uid || u.email;
     if (!uid || uid === "default") return;
@@ -2563,7 +2564,6 @@ function App() {
   useEffect(() => {
     const db = window.firestoreDB;
     if (!db) return;
-    const dataUid = localStorage.getItem("lb_data_uid");
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
     const uid = dataUid || u.uid || u.email;
     if (!uid || uid === "default") return;
@@ -2615,7 +2615,7 @@ function App() {
       }
     }));
     return () => unsubs.forEach((u2) => u2());
-  }, [user]);
+  }, [user, dataUid]);
   const handleLogout = useCallback(async () => {
     localStorage.removeItem("lb_user");
     try {
