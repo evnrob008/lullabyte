@@ -473,7 +473,14 @@ const getLinkedUid = async (uid) => {
     if (doc.exists) return doc.data().ownerUid;
   } catch (e) {
     console.warn("getLinkedUid error:", e.message);
+    // If Firestore fails, fall back to cached value
+    const cached = localStorage.getItem("lb_data_uid");
+    if (cached && cached !== uid) return cached;
   }
+  // Also check cache even on success — if doc doesn't exist but cache has a different uid,
+  // trust the cache (user may have linked on another device)
+  const cached = localStorage.getItem("lb_data_uid");
+  if (cached && cached !== uid) return cached;
   return uid;
 };
 function OnboardingScreen({ onComplete }) {
@@ -2618,6 +2625,7 @@ function App() {
   }, [user, dataUid]);
   const handleLogout = useCallback(async () => {
     localStorage.removeItem("lb_user");
+    // Note: intentionally keep lb_data_uid so partner link survives re-login
     try {
       const auth = await window.firebaseReady;
       if (auth && auth.signOut) await auth.signOut();
