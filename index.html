@@ -2552,7 +2552,7 @@ function App() {
     const db = window.firestoreDB;
     if (!db) return;
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
-    const uid = dataUid || u.uid || u.email;
+    const uid = dataUid || localStorage.getItem("lb_data_uid") || u.uid || u.email;
     if (!uid || uid === "default") return;
     const ref = db.collection("users").doc(uid).collection("activeSleep").doc("data");
     if (activeSleep) {
@@ -2560,7 +2560,7 @@ function App() {
     } else {
       ref.delete().catch(() => {});
     }
-  }, [activeSleep]);
+  }, [activeSleep, dataUid]);
   const handleUpdateBabyProfile = useCallback(async (updated) => {
     setBabyProfile(updated);
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
@@ -2573,7 +2573,7 @@ function App() {
     const db = window.firestoreDB;
     if (!db) return;
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
-    const uid = dataUid || u.uid || u.email;
+    const uid = dataUid || localStorage.getItem("lb_data_uid") || u.uid || u.email;
     if (!uid || uid === "default") return;
     const unsubs = [];
     // Listen for sleeps changes (covers nap timer start/end)
