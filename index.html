@@ -402,6 +402,7 @@ const fsSetArray = async (uid, collection, arr) => {
     if (!db || !uid || uid === "default") return;
     const ownerUid = localStorage.getItem("lb_data_uid");
     const writeUid = ownerUid || uid;
+    console.log("✍️ fsSetArray", collection, "-> uid:", writeUid, "(caller uid:", uid, ")");
     const payload = { value: str, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
     await db.collection("users").doc(writeUid).collection(collection).doc("data").set(payload);
     if (ownerUid && ownerUid !== uid) {
@@ -2554,6 +2555,7 @@ function App() {
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
     const uid = dataUid || localStorage.getItem("lb_data_uid") || u.uid || u.email;
     if (!uid || uid === "default") return;
+    console.log("⏱️ activeSleep write to uid:", uid, "activeSleep:", activeSleep ? "set" : "null");
     const ref = db.collection("users").doc(uid).collection("activeSleep").doc("data");
     if (activeSleep) {
       ref.set({ ...activeSleep, start: activeSleep.start instanceof Date ? activeSleep.start.toISOString() : activeSleep.start }).catch(() => {});
@@ -2575,9 +2577,11 @@ function App() {
     const u = JSON.parse(localStorage.getItem("lb_user") || "{}");
     const uid = dataUid || localStorage.getItem("lb_data_uid") || u.uid || u.email;
     if (!uid || uid === "default") return;
+    console.log("👂 listener subscribing to uid:", uid, "(dataUid state:", dataUid, ")");
     const unsubs = [];
     // Listen for sleeps changes (covers nap timer start/end)
     unsubs.push(db.collection("users").doc(uid).collection("sleeps").doc("data").onSnapshot((doc) => {
+      console.log("📥 sleeps snapshot from", uid, "exists:", doc.exists);
       if (doc.exists) {
         try {
           const data = JSON.parse(doc.data().value);
@@ -2598,6 +2602,7 @@ function App() {
     }));
     // Listen for schedule changes
     unsubs.push(db.collection("users").doc(uid).collection("schedule").doc("data").onSnapshot((doc) => {
+      console.log("📥 schedule snapshot from", uid, "exists:", doc.exists);
       if (doc.exists) {
         try {
           const data = JSON.parse(doc.data().value);
