@@ -1664,9 +1664,10 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         if (e.type === "wake" && e.id !== "wake-0" && !e.id.startsWith("wake-r-") && e.id !== "wake-final") {
           if (new Date(e.start) >= rebuildStart) return false;
         }
-        // Mark unlogged naps as virtual — keep for WW end calc, skip rendering
-        if (e.type === "nap" && !e._recorded) { e._virtual = true; return true; }
       }
+      // Always mark unlogged scheduled naps as virtual — keep for WW timing calc, skip rendering
+      // (logged naps are shown via actualNap/compoundNap tiles instead)
+      if (e.type === "nap" && !e._recorded) { e._virtual = true; }
       return true;
     }),
     ...nightSleeps.map((s, idx) => { const sStart = new Date(s.start); const sEnd = s.end ? new Date(s.end) : null; const todayD = /* @__PURE__ */ new Date(); const midnight = new Date(todayD); midnight.setHours(0,0,0,0); const isCross = sStart.toDateString() !== todayD.toDateString(); const durFrom = isCross ? midnight : sStart; const durLabel = sEnd ? durationLabel(diffMins(durFrom, sEnd)) : null; return { id: `night-${s.id}`, kind: "nightSleep", label: `Night Sleep ${idx + 1}`, subLabel: durLabel, start: sStart, end: sEnd, type: "nightSleep", raw: s, isNightSleep: true, isCrossMidnight: isCross, durationStart: durFrom }; }),
