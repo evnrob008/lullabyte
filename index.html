@@ -1985,7 +1985,8 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     )))
     })), showSettings && /* @__PURE__ */ React.createElement(ScheduleSettingsModal, { settings: scheduleSettings, onSave: (s) => {
     const _u = JSON.parse(localStorage.getItem("lb_user") || "{}");
-    fsSet(_u.uid || _u.email || "default", "settings", s);
+    const _uid = localStorage.getItem("lb_data_uid") || _u.uid || _u.email || "default";
+    fsSet(_uid, "settings", s);
     onSaveScheduleSettings(s);
     onUpdateSchedule(generateSchedule(s));
   }, onClose: () => setShowSettings(false) }), showNapModal && /* @__PURE__ */ React.createElement(
