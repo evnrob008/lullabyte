@@ -2569,18 +2569,6 @@ function App() {
     }
     return null;
   });
-  const activeSleepRef = useRef(activeSleep);
-  useEffect(() => { activeSleepRef.current = activeSleep; }, [activeSleep]);
-  // On startup, if activeSleep is restored but very old (>8hrs), auto-save and clear it
-  useEffect(() => {
-    const current = activeSleepRef.current;
-    if (!current || !current.start) return;
-    const ageHrs = (Date.now() - new Date(current.start)) / 3600000;
-    if (ageHrs > 8) {
-      // Too old to be a real active timer — clear without saving
-      setActiveSleep(null);
-    }
-  }, []);
   useEffect(() => {
     if (activeSleep) {
       localStorage.setItem("lb_active_sleep", JSON.stringify(activeSleep));
@@ -2658,23 +2646,6 @@ function App() {
           }
         } catch (e) {}
       } else {
-        // Doc was deleted — if we have an active timer, auto-save the sleep
-        const current = activeSleepRef.current;
-        if (current && current.start) {
-          const napEnd = new Date();
-          const napStart = new Date(current.start);
-          const napId = Date.now();
-          const bedH = parseInt((JSON.parse(localStorage.getItem("lb_settings") || "{}").bedTime || "19:30").split(":")[0]);
-          const wakeH = parseInt((JSON.parse(localStorage.getItem("lb_settings") || "{}").wakeTime || "07:00").split(":")[0]);
-          const startH = napStart.getHours();
-          const isNight = startH >= bedH || startH < wakeH;
-          setSleeps((prev) => {
-            const next = [...prev, { id: napId, start: napStart, end: napEnd, isNight, autoSaved: true }];
-            const writeUid = localStorage.getItem("lb_data_uid") || JSON.parse(localStorage.getItem("lb_user") || "{}").uid || "default";
-            fsSetArray(writeUid, "sleeps", next);
-            return next;
-          });
-        }
         setActiveSleep(null);
       }
     }, (err) => console.error("❌ activeSleep listener error:", err.code, err.message)));
