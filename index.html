@@ -1754,6 +1754,8 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       }
     }
   });
+  // Re-sort after Pass 2 — unlogged nap start times were mutated, must sort before Pass 3
+  allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
   // Pass 3: fix wake window ends
   allTimelineItems.forEach((ev, i) => {
     if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0" && ev.id !== "bed") {
