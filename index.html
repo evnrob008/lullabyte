@@ -2513,8 +2513,9 @@ function App() {
       if (schedule2 && schedule2.length > 0) {
         const parsed = schedule2.map((e) => __spreadProps(__spreadValues({}, e), { start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null }));
         const today = (/* @__PURE__ */ new Date()).toDateString();
-        const scheduleDate = ((_a = parsed[0]) == null ? void 0 : _a.start) ? new Date(parsed[0].start).toDateString() : null;
-        if (scheduleDate === today) {
+        // Check if any wake/nap event is from today (not just the first item, which could be a night sleep)
+        const hasTodayEvents = parsed.some((e) => e.start && new Date(e.start).toDateString() === today && (e.type === "wake" || e.type === "nap" || e.type === "sleep"));
+        if (hasTodayEvents) {
           setSchedule(parsed);
         } else {
           const fresh = generateSchedule(settings);
