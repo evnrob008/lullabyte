@@ -1717,13 +1717,16 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
   // Sort BEFORE post-processing so passes run in time order
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
-  // Override wake-0 start with actual night sleep end if later than scheduled wake time
+  // Compute actual wake time from last night sleep end (used for display only, not sort order)
   const lastNightSleepEnd = nightSleeps.reduce((latest, s) => {
     const e = new Date(s.end); return e > latest ? e : latest;
   }, new Date(0));
   const wake0 = allTimelineItems.find((e) => e.id === "wake-0");
   if (wake0 && lastNightSleepEnd > new Date(0) && lastNightSleepEnd > new Date(wake0.start)) {
-    wake0.start = new Date(lastNightSleepEnd);
+    wake0._actualWakeTime = new Date(lastNightSleepEnd);
+    // Also update WW1 start so wake windows chain from actual wake time
+    const ww1 = allTimelineItems.find((e) => e.type === "wake" && e.id !== "wake-0" && e.kind === "scheduled");
+    if (ww1) ww1.start = new Date(lastNightSleepEnd);
   }
   // Post-process: correct all scheduled item times based on actual sleep data
   // Pass 1: fix recorded nap times from todaySleeps
@@ -1991,7 +1994,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         onClick: () => { if (isPast || isFuture) { setExpandedPastEvents((prev) => { const next = new Set(prev); if (next.has(ev.id)) next.delete(ev.id); else next.add(ev.id); return next; }); } else if (isScheduled && ev.editable) { setEditEvent(ev); } }
       },
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : (isPast && !expandedPastEvents.has(ev.id)) ? 400 : (isFuture && !expandedPastEvents.has(ev.id)) ? 500 : 700, fontSize: isLive ? 15 : (isPast && !expandedPastEvents.has(ev.id)) || (isFuture && !expandedPastEvents.has(ev.id)) ? 13 : 14, color: ev.id === "bed" ? "#ffffff" : ev.id === "wake-0" ? "#5a4000" : (isPast && !expandedPastEvents.has(ev.id)) ? PAL.muted : (isFuture && !expandedPastEvents.has(ev.id)) ? PAL.muted : PAL.text } }, ev.label), ((isPast && !expandedPastEvents.has(ev.id)) || (isFuture && !expandedPastEvents.has(ev.id))) && ev.type === "wake" && ev.id !== "wake-0" && (() => { const _s = new Date(ev.start); const _nxt = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap"); const _e = _nxt ? new Date(_nxt.start) : new Date(864e13); const _fs = bottleFeeds.filter((f) => { const t = strToDate(f.time); return t >= _s && t < _e; }); if (!_fs.length) return null; const icons = _fs.map((f) => f.type === "solids" ? "\uD83E\uDD44" : "\uD83C\uDF7C"); return /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13, marginLeft: 2, opacity: 0.7 } }, icons.join("")); })(), ev.subLabel && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: PAL.muted } }, ev.subLabel)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 } }, (() => {
-        let startTime = new Date(ev.start);
+        let startTime = ev.id === "wake-0" && ev._actualWakeTime ? ev._actualWakeTime : new Date(ev.start);
         if (ev.type === "wake" && ev.id !== "wake-0") {
           const prevEv = allTimelineItems.slice(0, i).reverse().find((e) => e.kind !== "orphanFeed" && e.kind !== "nightSleep" && e.kind !== "nowDivider");
           if (prevEv == null ? void 0 : prevEv.end) startTime = new Date(prevEv.end);
