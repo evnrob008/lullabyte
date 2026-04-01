@@ -332,6 +332,7 @@ const strToDate = (timeStr, base = /* @__PURE__ */ new Date()) => {
   return d;
 };
 const addMins = (date, mins) => new Date(date.getTime() + mins * 6e4);
+const localDateStr = (d) => { const dt = d || new Date(); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; };
 const diffMins = (a, b) => Math.round((b - a) / 6e4);
 const toTimeInput = (date) => {
   if (!date) return "";
