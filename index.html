@@ -1779,23 +1779,37 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     }
   });
 
-  // Walk items in time order; for each scheduled wake window or unlogged nap, recalculate from cursor
-  allTimelineItems.forEach((ev) => {
-    if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
-      // Logged nap: advance cursor to its end
-      if (ev.end) cursor = new Date(ev.end);
-    } else if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded && ev.end) {
-      cursor = new Date(ev.end);
-    } else if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0") {
-      // Wake window: start = cursor, end = cursor + ww (will be overridden by next nap start below)
-      ev.start = new Date(cursor);
-      ev.end = addMins(new Date(cursor), ww);
-    } else if (ev.kind === "scheduled" && ev.type === "nap" && ev._virtual) {
-      // Unlogged (virtual) nap: place it at cursor + ww
-      const napStart = addMins(new Date(cursor), ww);
-      ev.start = napStart;
-      ev.end = addMins(napStart, napDur);
-      cursor = new Date(ev.end);
+  // Forward pass: walk schedule slots in order, threading cursor
+  // For each nap slot: if logged, use actual end; if virtual, place at cursor+ww
+  // For each wake window: start = cursor (end of last nap)
+  schedule.forEach((slot) => {
+    if (slot.id === "wake-0" || slot.type !== "wake" && slot.type !== "nap") return;
+    if (slot.type === "wake" && slot.id === "wake-0") return;
+    if (slot.type === "wake") {
+      // Find this WW in allTimelineItems and set its start from cursor
+      const wwEv = allTimelineItems.find((e) => e.id === slot.id);
+      if (wwEv) { wwEv.start = new Date(cursor); wwEv.end = addMins(new Date(cursor), ww); }
+    } else if (slot.type === "nap") {
+      if (replacedScheduledNapIds.has(slot.id)) {
+        // Logged nap: find the actualNap item and advance cursor to its end
+        const actualEv = allTimelineItems.find((e) =>
+          (e.kind === "actualNap" || e.kind === "compoundNap") &&
+          Math.abs(new Date(e.start) - new Date(slot.start)) < 8 * 60 * 60 * 1000 &&
+          !e._cursorConsumed);
+        if (actualEv && actualEv.end) {
+          cursor = new Date(actualEv.end);
+          actualEv._cursorConsumed = true;
+        }
+      } else {
+        // Virtual (unlogged) nap: place at cursor + ww
+        const virtualEv = allTimelineItems.find((e) => e.id === slot.id && e._virtual);
+        if (virtualEv) {
+          const napStart = addMins(new Date(cursor), ww);
+          virtualEv.start = napStart;
+          virtualEv.end = addMins(napStart, napDur);
+          cursor = new Date(virtualEv.end);
+        }
+      }
     }
   });
 
