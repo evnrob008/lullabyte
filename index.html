@@ -1717,21 +1717,32 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
   // Sort BEFORE post-processing so passes run in time order
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
-  // Compute actual wake time from last night sleep end (used for display only, not sort order)
+  const ww = (scheduleSettings && scheduleSettings.wakeWindowMins) || 180;
+  const napDur = (scheduleSettings && scheduleSettings.napDurationMins) || 35;
+
+  // Determine actual wake time: latest of scheduled wake OR end of last night sleep
   const lastNightSleepEnd = nightSleeps.reduce((latest, s) => {
     const e = new Date(s.end); return e > latest ? e : latest;
   }, new Date(0));
   const wake0 = allTimelineItems.find((e) => e.id === "wake-0");
-  if (wake0 && lastNightSleepEnd > new Date(0) && lastNightSleepEnd > new Date(wake0.start)) {
-    wake0._actualWakeTime = new Date(lastNightSleepEnd);
-    // Also update WW1 start so wake windows chain from actual wake time
-    const ww1 = allTimelineItems.find((e) => e.type === "wake" && e.id !== "wake-0" && e.kind === "scheduled");
-    if (ww1) ww1.start = new Date(lastNightSleepEnd);
+  const scheduledWakeTime = wake0 ? new Date(wake0.start) : new Date();
+  const actualWakeTime = (lastNightSleepEnd > new Date(0) && lastNightSleepEnd > scheduledWakeTime)
+    ? lastNightSleepEnd : scheduledWakeTime;
+  if (wake0) {
+    wake0._actualWakeTime = actualWakeTime;
   }
-  // Post-process: correct all scheduled item times based on actual sleep data
-  // Pass 1: fix recorded nap times from todaySleeps
-  const ww = (scheduleSettings && scheduleSettings.wakeWindowMins) || 180;
-  const napDur = (scheduleSettings && scheduleSettings.napDurationMins) || 35;
+
+  // Determine bedtime: from the scheduled "bed" event (may have been manually adjusted)
+  const bedEv = allTimelineItems.find((e) => e.id === "bed");
+  const bedTime = bedEv ? new Date(bedEv.start) : null;
+
+  // Single forward pass: rebuild all scheduled wake windows and unlogged naps
+  // from a running cursor that starts at actualWakeTime and advances through
+  // each logged nap end, keeping wake windows and unlogged naps in sync.
+  // cursor = the end of the last known real event (wake-up or nap end)
+  let cursor = new Date(actualWakeTime);
+
+  // First, fix any _recorded nap times from the actual sleep data
   allTimelineItems.forEach((ev) => {
     if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded) {
       const actualSleep = todaySleeps.filter(s => !s.isNight).find(s =>
@@ -1743,46 +1754,47 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       }
     }
   });
-  // Pass 2: forward pass — each wake window and unlogged nap derives its times from what came before
-  let lastNapEnd = null;
+
+  // Walk items in time order; for each scheduled wake window or unlogged nap, recalculate from cursor
   allTimelineItems.forEach((ev) => {
-    if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded && ev.end) {
-      lastNapEnd = new Date(ev.end);
-    } else if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
-      if (ev.end) lastNapEnd = new Date(ev.end);
+    if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
+      // Logged nap: advance cursor to its end
+      if (ev.end) cursor = new Date(ev.end);
+    } else if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded && ev.end) {
+      cursor = new Date(ev.end);
     } else if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0") {
-      if (lastNapEnd) ev.start = new Date(lastNapEnd);
-    } else if (ev.kind === "scheduled" && ev.type === "nap" && !ev._recorded) {
-      if (lastNapEnd) {
-        const newStart = addMins(new Date(lastNapEnd), ww);
-        const dur = napDur;
-        ev.start = newStart;
-        ev.end = addMins(newStart, dur);
-        lastNapEnd = new Date(ev.end); // carry forward so next WW starts correctly
-      }
+      // Wake window: start = cursor, end = cursor + ww (will be overridden by next nap start below)
+      ev.start = new Date(cursor);
+      ev.end = addMins(new Date(cursor), ww);
+    } else if (ev.kind === "scheduled" && ev.type === "nap" && ev._virtual) {
+      // Unlogged (virtual) nap: place it at cursor + ww
+      const napStart = addMins(new Date(cursor), ww);
+      ev.start = napStart;
+      ev.end = addMins(napStart, napDur);
+      cursor = new Date(ev.end);
     }
   });
-  // Re-sort after Pass 2 — unlogged nap start times were mutated, must sort before Pass 3
+
+  // Re-sort after mutations
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
-  // Pass 3: fix wake window ends
+
+  // Fix wake window ends to exactly match the start of the next nap (logged or virtual)
   allTimelineItems.forEach((ev, i) => {
-    if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0" && ev.id !== "bed") {
+    if (ev.kind === "scheduled" && ev.type === "wake" && ev.id !== "wake-0") {
       const nextNap = allTimelineItems.slice(i + 1).find(e =>
-        e.type === "nap" && (e.kind === "actualNap" || e.kind === "compoundNap" || (e.kind === "scheduled" && e._recorded))
+        e.type === "nap" && !e._virtual &&
+        (e.kind === "actualNap" || e.kind === "compoundNap" || (e.kind === "scheduled" && e._recorded))
       );
-      const nextUnlogged = allTimelineItems.slice(i + 1).find(e =>
-        e.kind === "scheduled" && e.type === "nap" && !e._recorded
-      );
-      if (nextNap) {
-        ev.end = new Date(nextNap.start);
-      } else if (nextUnlogged) {
-        ev.end = new Date(nextUnlogged.start);
-      } else {
-        ev.end = addMins(new Date(ev.start), ww);
-      }
+      const nextVirtual = allTimelineItems.slice(i + 1).find(e => e._virtual);
+      if (nextNap) ev.end = new Date(nextNap.start);
+      else if (nextVirtual) ev.end = new Date(nextVirtual.start);
+      // Final WW: end = bedtime if set
+      else if (bedTime) ev.end = new Date(bedTime);
+      else ev.end = addMins(new Date(ev.start), ww);
     }
   });
-  // Re-sort after passes in case pass 2 mutated start times of unlogged naps
+
+  // Final re-sort
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
   let napCounter = 0;
   allTimelineItems.forEach((ev) => {
