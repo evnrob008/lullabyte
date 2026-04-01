@@ -1856,7 +1856,11 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       lastFeedLabel = "Last feed";
       lastFeedValue = "None today";
     }
-    const napEvents = schedule.filter((e) => e.type === "nap");
+    // Use allTimelineItems for nap times — these have the corrected display times
+    const napEvents = allTimelineItems.filter((e) =>
+      e.type === "nap" && e.start && e.end &&
+      (e._virtual || e.kind === "actualNap" || e.kind === "compoundNap" || (e.kind === "scheduled" && e._recorded))
+    );
     let napStatusLabel = "", napStatusValue = "";
     const currentScheduledNap = napEvents.find((e) => {
       const s = new Date(e.start);
