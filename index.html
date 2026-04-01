@@ -1600,7 +1600,22 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     const h = new Date(s.start).getHours();
     return s.isNight || h >= bedHour || h < wakeHour;
   };
-  const napSleeps = todaySleeps.filter((s) => !isNightSleep(s));
+  const napSleepsRaw = todaySleeps.filter((s) => !isNightSleep(s));
+  // Deduplicate near-identical nap sleeps (within 60s start) — keep longest
+  const usedDedup = new Set();
+  const napSleeps = napSleepsRaw.filter((s) => {
+    if (usedDedup.has(s.id)) return false;
+    const dupe = napSleepsRaw.find((o) => o.id !== s.id && !usedDedup.has(o.id) &&
+      Math.abs(new Date(o.start) - new Date(s.start)) < 60000);
+    if (dupe) {
+      // Keep the one with longer duration; mark the other as used
+      const sDur = s.end ? new Date(s.end) - new Date(s.start) : 0;
+      const dDur = dupe.end ? new Date(dupe.end) - new Date(dupe.start) : 0;
+      if (sDur >= dDur) { usedDedup.add(dupe.id); return true; }
+      else { usedDedup.add(s.id); return false; }
+    }
+    return true;
+  });
   const nightSleepsRaw = todaySleeps.filter((s) => isNightSleep(s)).filter((s) => s.end);
   const nightSleeps = nightSleepsRaw.filter((s) => {
     // Drop any night sleep fully contained within a longer night sleep
@@ -1694,6 +1709,17 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       return { id: `orphan-feed-${f.id}`, kind: "orphanFeed", type: "feed", start: strToDate(f.time), raw: f, isNightFeed };
     })
   ].sort((a, b) => new Date(a.start) - new Date(b.start));
+  // If all schedule nap slots are replaced (e.g. due to duplicates) but there are
+  // still wake windows needing future naps, inject synthetic virtual nap placeholders
+  const scheduledWWCount = schedule.filter((e) => e.type === "wake" && e.id !== "wake-0" && e.id !== "wake-final").length;
+  const loggedNapCount = rootChains.length;
+  const virtualNapCount = allTimelineItems.filter((e) => e._virtual).length;
+  const neededVirtuals = Math.max(0, scheduledWWCount - loggedNapCount - virtualNapCount);
+  for (let i = 0; i < neededVirtuals; i++) {
+    allTimelineItems.push({ id: `nap-synthetic-${i}`, kind: "scheduled", type: "nap",
+      _virtual: true, label: `Nap ${loggedNapCount + virtualNapCount + i + 1}`,
+      start: new Date(0), end: new Date(0) });
+  }
   // Sort BEFORE post-processing so passes run in time order
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
   const ww = (scheduleSettings && scheduleSettings.wakeWindowMins) || 180;
@@ -2725,9 +2751,9 @@ function App() {
           }
         } catch (e) {}
       } else {
-        // Doc was deleted — if we have an active timer, auto-save the sleep
+        // Doc was deleted — only auto-save if partner ended it (not this device)
         const current = activeSleepRef.current;
-        if (current && current.start) {
+        if (current && current.start && !isLocalActiveSleep.current) {
           const napEnd = new Date();
           const napStart = new Date(current.start);
           const napId = Date.now();
