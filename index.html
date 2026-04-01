@@ -1643,9 +1643,22 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   const replacedScheduledNapIds = /* @__PURE__ */ new Set();
   const napChainToSlot = /* @__PURE__ */ new Map();
   const rootChains = compoundNapGroups.filter((chain) => !chain[0].linkedToId).sort((a, b) => new Date(a[0].start) - new Date(b[0].start));
-  rootChains.forEach((chain, idx) => {
-    const slot = scheduledNaps[idx];
+  // Match each logged chain to the closest scheduled nap slot by time
+  const usedSlotIds = new Set();
+  rootChains.forEach((chain) => {
+    const chainStart = new Date(chain[0].start);
+    // First try: find a _recorded slot that matches this chain
+    let slot = scheduledNaps.find((s) => s._recorded &&
+      !usedSlotIds.has(s.id) &&
+      Math.abs(new Date(s.start) - chainStart) < 4 * 60 * 60 * 1000);
+    // Fallback: closest unrecorded slot by time
+    if (!slot) {
+      slot = scheduledNaps
+        .filter((s) => !usedSlotIds.has(s.id))
+        .sort((a, b) => Math.abs(new Date(a.start) - chainStart) - Math.abs(new Date(b.start) - chainStart))[0];
+    }
     if (slot) {
+      usedSlotIds.add(slot.id);
       replacedScheduledNapIds.add(slot.id);
       napChainToSlot.set(chain[0].id, slot.label);
     }
@@ -1720,8 +1733,14 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       _virtual: true, _synthetic: true, label: `Nap ${loggedNapCount + virtualNapCount + i + 1}`,
       start: new Date(8640000000000), end: new Date(8640000000000) });
   }
-  // Sort BEFORE post-processing so passes run in time order
-  allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
+  // Sort BEFORE post-processing — tiebreak: naps before wake windows
+  allTimelineItems.sort((a, b) => {
+    const ta = new Date(a.start), tb = new Date(b.start);
+    if (ta - tb !== 0) return ta - tb;
+    // Same time: naps before wake windows so cursor advances before WW is set
+    const order = (e) => e.type === "nap" ? 0 : e.type === "wake" ? 1 : 2;
+    return order(a) - order(b);
+  });
   const ww = (scheduleSettings && scheduleSettings.wakeWindowMins) || 180;
   const napDur = (scheduleSettings && scheduleSettings.napDurationMins) || 35;
 
@@ -1780,8 +1799,13 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     }
   });
 
-  // Re-sort after mutations
-  allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
+  // Re-sort after mutations — same tiebreaker
+  allTimelineItems.sort((a, b) => {
+    const ta = new Date(a.start), tb = new Date(b.start);
+    if (ta - tb !== 0) return ta - tb;
+    const order = (e) => e.type === "nap" ? 0 : e.type === "wake" ? 1 : 2;
+    return order(a) - order(b);
+  });
 
   // Fix wake window ends to exactly match the start of the next nap (logged or virtual)
   allTimelineItems.forEach((ev, i) => {
@@ -1814,7 +1838,12 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   if (finalWW && bedEv) finalWW.end = new Date(bedEv.start);
 
   // Final re-sort
-  allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
+  allTimelineItems.sort((a, b) => {
+    const ta = new Date(a.start), tb = new Date(b.start);
+    if (ta - tb !== 0) return ta - tb;
+    const order = (e) => e.type === "nap" ? 0 : e.type === "wake" ? 1 : 2;
+    return order(a) - order(b);
+  });
   let napCounter = 0;
   allTimelineItems.forEach((ev) => {
     if (ev.kind === "actualNap" || ev.kind === "compoundNap") {
