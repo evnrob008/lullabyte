@@ -1035,13 +1035,8 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
       onClose();
       return;
     } else {
-      // Bedtime edit: move bed + stretch the final wake window to match.
-      // Do NOT call rebuildFromIndex — that would reset the last WW to exactly wakeWindowMins.
-      updated[idx] = __spreadProps(__spreadValues({}, updated[idx]), { start: newStart, end: newEnd || updated[idx].end });
-      const finalWWIdx = updated.slice(0, idx).map((e, i2) => ({ e, i2 })).reverse().find(({ e }) => e.type === "wake" && e.id !== "wake-0");
-      if (finalWWIdx) {
-        updated[finalWWIdx.i2] = __spreadProps(__spreadValues({}, updated[finalWWIdx.i2]), { end: newStart });
-      }
+      // Bedtime edit: mark as manually set so display pass respects it
+      updated[idx] = __spreadProps(__spreadValues({}, updated[idx]), { start: newStart, end: newEnd || updated[idx].end, _manualBedtime: true });
       onSave(updated);
       onClose();
       return;
@@ -1793,6 +1788,20 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       else ev.end = addMins(new Date(ev.start), ww);
     }
   });
+
+  // Update bedtime to = last nap end + ww, cascading from actual wake time
+  // Find the last virtual or logged nap end to set cursor for bedtime
+  let finalCursor = new Date(actualWakeTime);
+  allTimelineItems.forEach((ev) => {
+    if (ev._virtual && ev.type === "nap" && ev.end) finalCursor = new Date(ev.end);
+    else if ((ev.kind === "actualNap" || ev.kind === "compoundNap") && ev.end) finalCursor = new Date(ev.end);
+    else if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded && ev.end) finalCursor = new Date(ev.end);
+  });
+  const autoBedTime = addMins(finalCursor, ww);
+  if (bedEv && !bedEv._manualBedtime) bedEv.start = autoBedTime;
+  // Always update final WW end to match current bedtime (manual or auto)
+  const finalWW = allTimelineItems.slice().reverse().find((e) => e.kind === "scheduled" && e.type === "wake" && e.id !== "wake-0");
+  if (finalWW && bedEv) finalWW.end = new Date(bedEv.start);
 
   // Final re-sort
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
