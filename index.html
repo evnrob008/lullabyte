@@ -2303,7 +2303,7 @@ function SummaryTab({ feeds, sleeps, moods, scheduleSettings, currentSchedule, o
       start: e.start ? new Date(e.start) : null,
       end: e.end ? new Date(e.end) : null
     }));
-    return { date: d, consumedMl, offeredMl, solidsMeals, dayNapMins, nightSleepMins, feeds: dayFeeds, sleeps: daySleeps, schedule: parsedSchedule, mood: (moods && moods[dStr2]) || null };
+    return { date: d, consumedMl, offeredMl, solidsMeals, dayNapMins, nightSleepMins, feeds: dayFeeds, sleeps: daySleeps, allSleeps: sleeps, schedule: parsedSchedule, mood: (moods && moods[dStr2]) || null };
   });
   const BarChart = ({ data, v1Key, v2Key, c1, c2, c1Label, c2Label, stacked, onToggleStacked, colW, spoonKey }) => {
     const max = Math.max(...data.map((d) => stacked ? (d[v1Key] || 0) + (d[v2Key] || 0) : Math.max(d[v1Key] || 0, d[v2Key] || 0)), 1);
@@ -2337,9 +2337,29 @@ function SummaryTab({ feeds, sleeps, moods, scheduleSettings, currentSchedule, o
         const startMins = toMins(s.start), endMins = toMins(s.end);
         return /* @__PURE__ */ React.createElement("div", { key: j, style: { position: "absolute", left: 0, right: 0, top: pct(startMins), height: pct(endMins - startMins), background: "#A8C4D4" } });
       }), d.sleeps.filter((s) => isNightSleep(s) && s.end).map((s, j) => {
-        const startMins = toMins(s.start), endMins = Math.min(toMins(s.end), TOTAL_MINS);
-        return /* @__PURE__ */ React.createElement("div", { key: j, style: { position: "absolute", left: 0, right: 0, top: pct(startMins), height: pct(endMins - startMins), background: "#1a2a4a" } });
-      }), d.feeds.map((f, j) => {
+        const startMins = toMins(s.start);
+        const endMins = toMins(s.end);
+        const crossMidnight = new Date(s.end).toDateString() !== new Date(s.start).toDateString();
+        // Render from startMins to midnight (or end if same day)
+        const renderEnd = crossMidnight ? TOTAL_MINS : endMins;
+        if (renderEnd <= startMins) return null;
+        return /* @__PURE__ */ React.createElement("div", { key: j, style: { position: "absolute", left: 0, right: 0, top: pct(startMins), height: pct(renderEnd - startMins), background: "#1a2a4a" } });
+      }),
+      // Cross-midnight sleeps from previous day: render midnight → end
+      (() => {
+        const prevDate = new Date(d.date);
+        prevDate.setDate(prevDate.getDate() - 1);
+        return (d.allSleeps || []).filter((s) => {
+          if (!s.end || !isNightSleep(s)) return false;
+          const sDate = new Date(s.start);
+          const eDate = new Date(s.end);
+          return sDate.toDateString() === prevDate.toDateString() && eDate.toDateString() === d.date.toDateString();
+        }).map((s, j) => {
+          const endMins = toMins(s.end);
+          if (endMins <= 0) return null;
+          return /* @__PURE__ */ React.createElement("div", { key: "xm-" + j, style: { position: "absolute", left: 0, right: 0, top: 0, height: pct(endMins), background: "#1a2a4a" } });
+        });
+      })(), d.feeds.map((f, j) => {
         const mins = toMins(strToDate(f.time, d.date));
         return /* @__PURE__ */ React.createElement("div", { key: j, style: { position: "absolute", left: "15%", right: "15%", top: pct(mins), height: 3, background: "#D4A8C4", borderRadius: 2 } });
       })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: isSelected ? PAL.primary : PAL.muted, fontWeight: isSelected ? 700 : 400, textAlign: "center", lineHeight: 1.3, marginTop: 3 } }, /* @__PURE__ */ React.createElement("div", null, dayLabelTop(d.date)), /* @__PURE__ */ React.createElement("div", null, dayLabelBot(d.date)), d.mood && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, marginTop: 2 } }, d.mood === "happy" ? "\uD83D\uDE04" : d.mood === "content" ? "\uD83D\uDE42" : "\uD83D\uDE22")));
