@@ -6,7 +6,8 @@
       "Bash(git add:*)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(node --check index.html)"
+      "Bash(node --check index.html)",
+      "Bash(grep -v \"^\\\\s*$\")"
     ]
   },
   "hooks": {
