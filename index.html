@@ -1928,7 +1928,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         const isNightTimer = startH >= bedH2 || startH < wakeH2;
         onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: isNightTimer, linkedToId: linkedToId || null });
         if (isNightTimer) {
-          isLocalActiveSleep.current = true; setActiveSleep(null);
+          setActiveSleep(null);
           return;
         }
         if (linkedToId) {
@@ -1960,7 +1960,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
             }
           }
         }
-        isLocalActiveSleep.current = true; setActiveSleep(null);
+        setActiveSleep(null);
       }
     }
   ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setShowNapModal(true), style: { flex: 1, padding: "10px", borderRadius: 12, border: `1.5px dashed ${PAL.sleep}`, background: "transparent", color: PAL.sleep, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u{1F4A4} Log Nap"), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowFeedModal(true), style: { flex: 1, padding: "10px", borderRadius: 12, border: `1.5px dashed ${PAL.feed}`, background: "transparent", color: PAL.feed, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" } }, "\u{1F37C} Log Feed"))), (() => { const todayStr2 = new Date().toISOString().slice(0, 10); const bedEv = schedule.find((e) => e.id === "bed"); const bedPassed = bedEv && new Date(bedEv.start) <= now; const todayMood = moods && moods[todayStr2]; if (!bedPassed || todayMood) return null; const moodOptions = [{ value: "unsettled", label: "Unsettled", emoji: "\uD83D\uDE22" }, { value: "content", label: "Content", emoji: "\uD83D\uDE42" }, { value: "happy", label: "Happy", emoji: "\uD83D\uDE04" }]; return /* @__PURE__ */ React.createElement("div", { style: { background: "#F0F4FF", border: "1.5px solid #B0C4FF", borderRadius: 14, padding: "14px 16px", marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: PAL.text, marginBottom: 4 } }, "\u2728 How was baby's day?"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginBottom: 12 } }, "Tap to log today's mood"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, moodOptions.map((m) => /* @__PURE__ */ React.createElement("button", { key: m.value, onClick: () => onSaveMood && onSaveMood(todayStr2, m.value), style: { flex: 1, padding: "10px 6px", borderRadius: 10, border: "1.5px solid #B0C4FF", background: "#fff", cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, m.emoji), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, fontWeight: 600, color: PAL.text } }, m.label))))); })(), schedule.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "40px 20px", color: PAL.muted } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\u{1F4C5}"), /* @__PURE__ */ React.createElement("p", { style: { margin: 0, fontSize: 15 } }, "No schedule yet.", /* @__PURE__ */ React.createElement("br", null), "Tap \u2699\uFE0F Settings to create one.")) : /* @__PURE__ */ React.createElement("div", { style: { position: "relative", overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: {
@@ -2053,7 +2053,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       activeSleep,
       onStartTimer: () => {
         const napStart = /* @__PURE__ */ new Date();
-        isLocalActiveSleep.current = true; setActiveSleep({ start: napStart });
+        setActiveSleep({ start: napStart });
         setShowNapModal(false);
         const h = napStart.getHours();
         const bedH = (scheduleSettings == null ? void 0 : scheduleSettings.bedTime) ? parseInt(scheduleSettings.bedTime.split(":")[0]) : 19;
@@ -2896,7 +2896,10 @@ function App() {
       sleeps,
       babyProfile,
       activeSleep,
-      onSetActiveSleep: setActiveSleep,
+      onSetActiveSleep: (val) => {
+        isLocalActiveSleep.current = true;
+        setActiveSleep(val);
+      },
       onUpdateSchedule: saveSchedule,
       onSaveScheduleSettings: (s) => {
         localStorage.setItem("lb_settings", JSON.stringify(s));
