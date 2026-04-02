@@ -724,12 +724,12 @@ function generateSchedule({ wakeTime, bedTime, numNaps, wakeWindowMins, napDurat
   for (let i = 0; i < n; i++) {
     const napStart = addMins(cursor, ww);
     const napEnd = addMins(napStart, napDurs[i]);
-    events.push({ id: `wake-${i + 1}`, type: "wake", label: `Wake Window ${i + 1}`, start: new Date(cursor), end: napStart, editable: false });
+    events.push({ id: `wake-${i + 1}`, type: "wake", label: `Wake Window ${i + 1}`, start: new Date(cursor), end: napStart, editable: true });
     events.push({ id: `nap-${i}`, type: "nap", label: `Nap ${i + 1}`, start: napStart, end: napEnd, editable: true, originalDurationMins: napDurationMins });
     cursor = napEnd;
   }
   const dynamicBedtime = addMins(cursor, ww);
-  events.push({ id: "wake-final", type: "wake", label: `Wake Window ${n + 1}`, start: new Date(cursor), end: dynamicBedtime, editable: false });
+  events.push({ id: "wake-final", type: "wake", label: `Wake Window ${n + 1}`, start: new Date(cursor), end: dynamicBedtime, editable: true });
   events.push({ id: "bed", type: "sleep", label: "Bedtime", start: dynamicBedtime, end: null, editable: true, originalFinalWW: ww });
   return events;
 }
@@ -761,13 +761,13 @@ function rebuildFromIndex(events, fromIdx, settings) {
     const napStart = addMins(buildCursor, ww);
     const napEnd = addMins(napStart, napDurs[i]);
     wwNum++;
-    newItems.push({ id: `wake-r-${i}-${napStart.getTime()}`, type: "wake", label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: napStart, editable: false });
+    newItems.push({ id: `wake-r-${i}-${napStart.getTime()}`, type: "wake", label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: napStart, editable: true });
     newItems.push(__spreadProps(__spreadValues({}, remaining[i]), { start: napStart, end: napEnd }));
     buildCursor = napEnd;
   }
   wwNum++;
   const finalBed = addMins(buildCursor, ww);
-  newItems.push({ id: `wake-r-final-${buildCursor.getTime()}`, type: "wake", label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: finalBed, editable: false });
+  newItems.push({ id: `wake-r-final-${buildCursor.getTime()}`, type: "wake", label: `Wake Window ${wwNum}`, start: new Date(buildCursor), end: finalBed, editable: true });
   return [
     ...prefix,
     ...newItems,
@@ -952,6 +952,10 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
   const [location, setLocation] = useState(event.location || "");
   const defaultDurMins = event.originalDurationMins || (scheduleSettings && scheduleSettings.napDurationMins) || 35;
   const [durInput, setDurInput] = useState(String(defaultDurMins));
+  const [wwDur, setWwDur] = useState(() => {
+    if (event.type === "wake" && event.end) return String(diffMins(new Date(event.start), new Date(event.end)));
+    return String((scheduleSettings && scheduleSettings.wakeWindowMins) || 180);
+  });
   const inp = {
     width: "100%",
     padding: "10px 12px",
@@ -1031,6 +1035,66 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
     onClose();
   };
   const hasEnd = event.type === "nap";
+  if (event.type === "wake" && event.id !== "wake-0") {
+    // Wake window edit: only allow changing end time (= next nap start)
+    const saveWW = () => {
+      const baseEnd = endDay === "yesterday" ? yesterday : today;
+      const newEnd = strToDate(endTime, baseEnd);
+      const wwIdx = allEvents.findIndex((e) => e.id === event.id);
+      if (wwIdx < 0) { onClose(); return; }
+      let updated = allEvents.map((e) => __spreadValues({}, e));
+      // Set this WW's end = newEnd, then rebuild everything after it
+      updated[wwIdx] = __spreadProps(__spreadValues({}, updated[wwIdx]), { end: newEnd });
+      // Find the next nap to rebuild from
+      const nextNapIdx = updated.slice(wwIdx + 1).findIndex((e) => e.type === "nap");
+      const absNextNapIdx = nextNapIdx >= 0 ? wwIdx + 1 + nextNapIdx : -1;
+      if (absNextNapIdx >= 0) {
+        const napDurMins = updated[absNextNapIdx].originalDurationMins || (scheduleSettings && scheduleSettings.napDurationMins) || 35;
+        updated[absNextNapIdx] = __spreadProps(__spreadValues({}, updated[absNextNapIdx]), { start: newEnd, end: addMins(newEnd, napDurMins) });
+        onSave(rebuildFromIndex(updated, absNextNapIdx, scheduleSettings));
+      } else {
+        // Final WW before bedtime — update bedtime too
+        const bedIdx = updated.findIndex((e) => e.id === "bed");
+        if (bedIdx >= 0) updated[bedIdx] = __spreadProps(__spreadValues({}, updated[bedIdx]), { start: newEnd, _manualBedtime: true });
+        onSave(updated);
+      }
+      onClose();
+    };
+    const wwStart = new Date(event.start);
+    // Keep end time and duration in sync
+    const handleDurChange = (val) => {
+      setWwDur(val);
+      const mins = parseInt(val);
+      if (!isNaN(mins) && mins > 0) setEndTime(toTimeInput(addMins(wwStart, mins)));
+    };
+    const handleEndChange = (val) => {
+      setEndTime(val);
+      const endDate = strToDate(val, wwStart);
+      const mins = diffMins(wwStart, endDate);
+      if (mins > 0) setWwDur(String(mins));
+    };
+    return /* @__PURE__ */ React.createElement(Overlay, { onClose },
+      /* @__PURE__ */ React.createElement("h3", { style: { margin: "0 0 4px", fontFamily: "'Figtree', sans-serif", color: PAL.text } }, "Edit Wake Window"),
+      /* @__PURE__ */ React.createElement("p", { style: { margin: "0 0 18px", color: PAL.muted, fontSize: 14 } }, event.label),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } },
+        /* @__PURE__ */ React.createElement("div", null,
+          /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Duration (minutes)"),
+          /* @__PURE__ */ React.createElement("input", { type: "number", min: "15", max: "360", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: wwDur, onChange: (e) => handleDurChange(e.target.value) })
+        ),
+        /* @__PURE__ */ React.createElement("div", null,
+          /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Or set end time (next nap starts)"),
+          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
+            /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { flex: 1 }), value: endTime, onChange: (e) => handleEndChange(e.target.value) }),
+            /* @__PURE__ */ React.createElement("select", { value: endDay, onChange: (e) => setEndDay(e.target.value), style: { padding: "10px 8px", borderRadius: 10, border: `1.5px solid ${PAL.border}`, fontSize: 14, background: PAL.soft, color: PAL.text, fontFamily: "inherit", outline: "none", cursor: "pointer", flexShrink: 0 } },
+              /* @__PURE__ */ React.createElement("option", { value: "yesterday" }, "Yesterday"),
+              /* @__PURE__ */ React.createElement("option", { value: "today" }, "Today")
+            )
+          )
+        ),
+        /* @__PURE__ */ React.createElement("button", { onClick: saveWW, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.wake, color: PAL.text, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" } }, "Save")
+      )
+    );
+  }
   if (event._virtual) {
     const saveVirtual = () => {
       const mins = parseInt(durInput) || defaultDur;
