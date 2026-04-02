@@ -1930,7 +1930,6 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   // autoBedTime = end of last nap + wake window
   // cursor is already at the end of the last nap after the forward pass
   const autoBedTime = addMins(cursor, ww);
-  console.log("🛏 bedtime debug:", { cursor: cursor.toISOString(), autoBedTime: autoBedTime.toISOString(), bedEvStart: bedEv ? new Date(bedEv.start).toISOString() : "NO BED EV", manualBedtime: bedEv ? bedEv._manualBedtime : null, ww, napItems: allTimelineItems.filter(e => e.type === "nap").map(e => ({id: e.id, kind: e.kind, virtual: e._virtual, end: e.end ? new Date(e.end).toISOString() : null})), finalWW: (() => { const fw = allTimelineItems.slice().reverse().find(e => e.kind === "scheduled" && e.type === "wake" && e.id !== "wake-0"); return fw ? {id: fw.id, start: new Date(fw.start).toISOString(), end: fw.end ? new Date(fw.end).toISOString() : null} : "none"; })() });
   if (bedEv) {
     bedEv.start = autoBedTime;
     bedEv._manualBedtime = false;
@@ -2030,7 +2029,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     }
     // Use allTimelineItems for nap times — these have the corrected display times
     const napEvents = allTimelineItems.filter((e) =>
-      e.type === "nap" && e.start && e.end &&
+      e.type === "nap" && e.start && e.end && !e._synthetic &&
       (e._virtual || e.kind === "actualNap" || e.kind === "compoundNap" || (e.kind === "scheduled" && e._recorded))
     );
     let napStatusLabel = "", napStatusValue = "";
