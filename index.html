@@ -1848,11 +1848,23 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   });
   const autoBedTime = addMins(finalCursor, ww);
   if (bedEv) {
-    // Only respect manual bedtime if it is after the last nap end (not stale)
-    const manualIsStale = bedEv._manualBedtime && new Date(bedEv.start) <= finalCursor;
+    const manualBedStart = new Date(bedEv.start);
+    // Manual bedtime is stale if: it's before the last nap end, OR
+    // it's more than 6 hours after the auto-calculated bedtime (clearly from another day)
+    const manualIsStale = bedEv._manualBedtime && (
+      manualBedStart < finalCursor ||
+      manualBedStart - autoBedTime > 6 * 60 * 60 * 1000
+    );
     if (!bedEv._manualBedtime || manualIsStale) {
       bedEv.start = autoBedTime;
-      if (manualIsStale) bedEv._manualBedtime = false;
+      if (manualIsStale) {
+        bedEv._manualBedtime = false;
+        // Persist the correction so stale data doesn't come back from Firestore
+        const correctedSchedule = schedule.map((e) => e.id === "bed"
+          ? { ...e, _manualBedtime: false, start: autoBedTime }
+          : e);
+        setTimeout(() => onUpdateSchedule(correctedSchedule), 0);
+      }
     }
   }
   // Always update final WW end to match current bedtime (manual or auto)
