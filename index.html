@@ -1847,7 +1847,14 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     else if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded && ev.end) finalCursor = new Date(ev.end);
   });
   const autoBedTime = addMins(finalCursor, ww);
-  if (bedEv && !bedEv._manualBedtime) bedEv.start = autoBedTime;
+  if (bedEv) {
+    // Only respect manual bedtime if it is after the last nap end (not stale)
+    const manualIsStale = bedEv._manualBedtime && new Date(bedEv.start) <= finalCursor;
+    if (!bedEv._manualBedtime || manualIsStale) {
+      bedEv.start = autoBedTime;
+      if (manualIsStale) bedEv._manualBedtime = false;
+    }
+  }
   // Always update final WW end to match current bedtime (manual or auto)
   const finalWW = allTimelineItems.slice().reverse().find((e) => e.kind === "scheduled" && e.type === "wake" && e.id !== "wake-0");
   if (finalWW && bedEv) finalWW.end = new Date(bedEv.start);
