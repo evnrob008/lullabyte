@@ -1847,20 +1847,10 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     else if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded && ev.end) finalCursor = new Date(ev.end);
   });
   const autoBedTime = addMins(finalCursor, ww);
+  console.log("🛏 bedtime debug:", { finalCursor: finalCursor.toISOString(), autoBedTime: autoBedTime.toISOString(), bedEvStart: bedEv ? new Date(bedEv.start).toISOString() : null, manualBedtime: bedEv ? bedEv._manualBedtime : null, ww });
   if (bedEv) {
-    const manualBedStart = new Date(bedEv.start);
-    // Manual bedtime is stale if: it's before the last nap end, OR
-    // it's more than 6 hours after the auto-calculated bedtime (clearly from another day)
-    const manualIsStale = bedEv._manualBedtime && (
-      manualBedStart < finalCursor ||
-      manualBedStart - autoBedTime > 6 * 60 * 60 * 1000
-    );
-    if (!bedEv._manualBedtime || manualIsStale) {
-      bedEv.start = autoBedTime;
-      if (manualIsStale) {
-        bedEv._manualBedtime = false;
-      }
-    }
+    bedEv.start = autoBedTime;
+    bedEv._manualBedtime = false;
   }
   // Always update final WW end to match current bedtime (manual or auto)
   const finalWW = allTimelineItems.slice().reverse().find((e) => e.kind === "scheduled" && e.type === "wake" && e.id !== "wake-0");
