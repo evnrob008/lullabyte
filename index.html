@@ -1802,11 +1802,14 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         }
       } else {
         // Virtual (unlogged) nap: place at cursor + ww
-        const virtualEv = allTimelineItems.find((e) => e.id === slot.id && e._virtual);
+        // First try to find by slot id, then fall back to any unused synthetic
+        let virtualEv = allTimelineItems.find((e) => e.id === slot.id && e._virtual && !e._synthetic);
+        if (!virtualEv) virtualEv = allTimelineItems.find((e) => e._synthetic && !e._cursorConsumed);
         if (virtualEv) {
           const napStart = addMins(new Date(cursor), ww);
           virtualEv.start = napStart;
           virtualEv.end = addMins(napStart, napDur);
+          virtualEv._cursorConsumed = true;
           cursor = new Date(virtualEv.end);
         }
       }
@@ -1840,6 +1843,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   // Find the last virtual or logged nap end to set cursor for bedtime
   let finalCursor = new Date(actualWakeTime);
   allTimelineItems.forEach((ev) => {
+    if (ev._synthetic) return; // exclude sentinel values
     if (ev._virtual && ev.type === "nap" && ev.end) finalCursor = new Date(ev.end);
     else if ((ev.kind === "actualNap" || ev.kind === "compoundNap") && ev.end) finalCursor = new Date(ev.end);
     else if (ev.kind === "scheduled" && ev.type === "nap" && ev._recorded && ev.end) finalCursor = new Date(ev.end);
