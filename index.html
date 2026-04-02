@@ -1974,14 +1974,29 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     const now2 = /* @__PURE__ */ new Date();
     const midnight = new Date(now2);
     midnight.setHours(0, 0, 0, 0);
-    const completedNapMins = sleeps.filter((s) => {
+    // Deduplicate naps within 5 min of each other before summing
+    const rawNapSleeps = sleeps.filter((s) => {
       if (!s.end || new Date(s.start) < midnight) return false;
       if (s.isNight) return false;
       const h = new Date(s.start).getHours();
       const bedH2 = (scheduleSettings == null ? void 0 : scheduleSettings.bedTime) ? parseInt(scheduleSettings.bedTime.split(":")[0]) : 19;
       const wakeH2 = (scheduleSettings == null ? void 0 : scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
       return !(h >= bedH2 || h < wakeH2);
-    }).reduce((sum, s) => sum + diffMins(new Date(s.start), new Date(s.end)), 0);
+    });
+    const usedDedupStat = new Set();
+    const dedupedNapSleeps = rawNapSleeps.filter((s) => {
+      if (usedDedupStat.has(s.id)) return false;
+      const dupe = rawNapSleeps.find((o) => o.id !== s.id && !usedDedupStat.has(o.id) &&
+        Math.abs(new Date(o.start) - new Date(s.start)) < 5 * 60000);
+      if (dupe) {
+        const sDur = s.end ? new Date(s.end) - new Date(s.start) : 0;
+        const dDur = dupe.end ? new Date(dupe.end) - new Date(dupe.start) : 0;
+        if (sDur >= dDur) { usedDedupStat.add(dupe.id); return true; }
+        else { usedDedupStat.add(s.id); return false; }
+      }
+      return true;
+    });
+    const completedNapMins = dedupedNapSleeps.reduce((sum, s) => sum + diffMins(new Date(s.start), new Date(s.end)), 0);
     const activeNapMins = activeSleep ? diffMins(activeSleep.start, now2) : 0;
     const totalNapMins = completedNapMins + activeNapMins;
     const todayDateStr = localDateStr();
