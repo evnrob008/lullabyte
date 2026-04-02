@@ -2805,7 +2805,13 @@ function App() {
           const bedEvL = parsed.find((e) => e.id === "bed");
           if (bedEvL && bedEvL._manualBedtime && wakeEv) {
             const gap = new Date(bedEvL.start) - new Date(wakeEv.start);
-            if (gap > 12 * 60 * 60 * 1000 || gap < 0) bedEvL._manualBedtime = false;
+            if (gap > 12 * 60 * 60 * 1000 || gap < 0) {
+              bedEvL._manualBedtime = false;
+              // Write the corrected schedule back to Firestore to clear the stale flag
+              const corrected = parsed.map((e) => e.id === "bed" ? { ...e, _manualBedtime: false } : e);
+              const writeUid2 = localStorage.getItem("lb_data_uid") || JSON.parse(localStorage.getItem("lb_user") || "{}").uid || "default";
+              fsSet(writeUid2, "schedule", corrected).catch(() => {});
+            }
           }
           setSchedule(parsed);
           localStorage.setItem(`lb_schedule_${uid}`, JSON.stringify(data));
