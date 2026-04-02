@@ -950,6 +950,8 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
   const [moodSleep, setMoodSleep] = useState(event.moodSleep || null);
   const [moodWake, setMoodWake] = useState(event.moodWake || null);
   const [location, setLocation] = useState(event.location || "");
+  const defaultDurMins = event.originalDurationMins || (scheduleSettings && scheduleSettings.napDurationMins) || 35;
+  const [durInput, setDurInput] = useState(String(defaultDurMins));
   const inp = {
     width: "100%",
     padding: "10px 12px",
@@ -1030,9 +1032,6 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
   };
   const hasEnd = event.type === "nap";
   if (event._virtual) {
-    const defaultDur = event.originalDurationMins || (scheduleSettings && scheduleSettings.napDurationMins) || 35;
-    const [napDurMins, setNapDurMins] = [defaultDur, () => {}];
-    const [durInput, setDurInput] = React.useState(String(defaultDur));
     const saveVirtual = () => {
       const mins = parseInt(durInput) || defaultDur;
       const updated = allEvents.map((ev) => ev.id === event.id
@@ -1831,8 +1830,9 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         if (!virtualEv) virtualEv = allTimelineItems.find((e) => e._synthetic && !e._cursorConsumed);
         if (virtualEv) {
           const napStart = addMins(new Date(cursor), ww);
+          const slotDur = slot.originalDurationMins || napDur;
           virtualEv.start = napStart;
-          virtualEv.end = addMins(napStart, napDur);
+          virtualEv.end = addMins(napStart, slotDur);
           virtualEv._cursorConsumed = true;
           cursor = new Date(virtualEv.end);
         }
