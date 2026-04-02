@@ -1859,11 +1859,6 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       bedEv.start = autoBedTime;
       if (manualIsStale) {
         bedEv._manualBedtime = false;
-        // Persist the correction so stale data doesn't come back from Firestore
-        const correctedSchedule = schedule.map((e) => e.id === "bed"
-          ? { ...e, _manualBedtime: false, start: autoBedTime }
-          : e);
-        setTimeout(() => onUpdateSchedule(correctedSchedule), 0);
       }
     }
   }
@@ -2692,6 +2687,13 @@ function App() {
       setScheduleSettings(settings);
       if (schedule2 && schedule2.length > 0) {
         const parsed = schedule2.map((e) => __spreadProps(__spreadValues({}, e), { start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null }));
+        // Clear stale _manualBedtime: if gap between wake and bed > 12h it's from another day
+        const wakeEvH = parsed.find((e) => e.id === "wake-0");
+        const bedEvH = parsed.find((e) => e.id === "bed");
+        if (bedEvH && bedEvH._manualBedtime && wakeEvH) {
+          const gap = new Date(bedEvH.start) - new Date(wakeEvH.start);
+          if (gap > 12 * 60 * 60 * 1000 || gap < 0) bedEvH._manualBedtime = false;
+        }
         const today = (/* @__PURE__ */ new Date()).toDateString();
         // Check if any wake/nap event is from today
         const hasTodayEvents = parsed.some((e) => e.start && new Date(e.start).toDateString() === today && (e.type === "wake" || e.type === "nap" || e.type === "sleep"));
@@ -2797,6 +2799,14 @@ function App() {
         try {
           const data = JSON.parse(doc.data().value);
           const parsed = data.map((e) => ({ ...e, start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null }));
+          // Clear stale _manualBedtime flags — if bed time is > 12h from scheduled wake,
+          // it was set on a different day and should not override today's cascade
+          const wakeEv = parsed.find((e) => e.id === "wake-0");
+          const bedEvL = parsed.find((e) => e.id === "bed");
+          if (bedEvL && bedEvL._manualBedtime && wakeEv) {
+            const gap = new Date(bedEvL.start) - new Date(wakeEv.start);
+            if (gap > 12 * 60 * 60 * 1000 || gap < 0) bedEvL._manualBedtime = false;
+          }
           setSchedule(parsed);
           localStorage.setItem(`lb_schedule_${uid}`, JSON.stringify(data));
         } catch (e) {}
