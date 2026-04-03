@@ -2974,13 +2974,13 @@ function App() {
     setSchedule(normalized);
   }, [scheduleSettings]);
   const deleteFeed = useCallback((id) => setFeeds((prev) => {
-    const next = prev.filter((x) => x.id !== id);
+    const next = prev.filter((x) => String(x.id) !== String(id));
     const uid = getDataUid();
     fsSetArray(uid, "feeds", next);
     return next;
   }), []);
   const deleteSleep = useCallback((id) => setSleeps((prev) => {
-    const next = prev.filter((x) => x.id !== id);
+    const next = prev.filter((x) => String(x.id) !== String(id));
     const uid = getDataUid();
     fsSetArray(uid, "sleeps", next);
     return next;
