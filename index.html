@@ -1765,134 +1765,128 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     }
   });
   // ─── Build timeline ───────────────────────────────────────────────────────
-  // Settings
   const ww = (scheduleSettings && scheduleSettings.wakeWindowMins) || 180;
   const napDurDefault = (scheduleSettings && scheduleSettings.napDurationMins) || 35;
-  const wakeHourSetting = (scheduleSettings && scheduleSettings.wakeTime)
-    ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
+  const numNaps = (scheduleSettings && scheduleSettings.numNaps) || 3;
 
-  // Actual wake time: max(scheduled wake, last night-sleep end today)
+  // Actual wake time: max(scheduled wake, last night-sleep end) unless manual
   const scheduledWake0 = schedule.find(e => e.id === "wake-0");
   const scheduledWakeTime = scheduledWake0 ? new Date(scheduledWake0.start) : strToDate((scheduleSettings && scheduleSettings.wakeTime) || "07:00");
   const lastNightEnd = nightSleeps.reduce((latest, s) => {
     const e = s.end ? new Date(s.end) : null;
-    return e && e > latest ? e : latest;
+    return (e && e > latest) ? e : latest;
   }, new Date(0));
-  // actualWake: if user set _manualWakeTime flag, use scheduled; else max(scheduled, nightEnd)
   const useManualWake = scheduledWake0 && scheduledWake0._manualWakeTime;
-  const actualWake = useManualWake ? new Date(scheduledWakeTime)
+  const actualWake = useManualWake
+    ? new Date(scheduledWakeTime)
     : (lastNightEnd > scheduledWakeTime ? new Date(lastNightEnd) : new Date(scheduledWakeTime));
 
-  // Build scheduled nap slots: cascade from actualWake, respecting logged nap times
-  // A "slot" = { index, scheduledStart, scheduledEnd, loggedChain|null }
-  const napSlots = [];
-  const numNaps = (scheduleSettings && scheduleSettings.numNaps) || 3;
-  {
-    let cursor = new Date(actualWake);
-    for (let i = 0; i < numNaps; i++) {
-      const napId = `nap-${i}`;
-      // Check if this slot has a logged nap chain
-      const chain = compoundNapGroups[i] || null;
-      const dur = chain ? null : napDurDefault;
-      const napStart = addMins(cursor, ww);
-      const napEnd = chain
-        ? (chain[chain.length-1].end ? new Date(chain[chain.length-1].end) : addMins(napStart, napDurDefault))
-        : addMins(napStart, napDurDefault);
-      napSlots.push({ index: i, id: napId, napStart, napEnd, chain });
-      cursor = new Date(napEnd);
+  // Sort logged day-nap chains by start time
+  const sortedChains = [...compoundNapGroups].sort((a, b) => new Date(a[0].start) - new Date(b[0].start));
+
+  // Cascade: for each slot 0..numNaps-1, use logged chain if available, else scheduled/default
+  // cursor tracks end of last nap to derive WW starts
+  let cursor = new Date(actualWake);
+  const slotItems = []; // [{wwItem, napItem}]
+
+  for (let i = 0; i < numNaps; i++) {
+    const wwId = `ww-${i}`;
+    const napId = `nap-${i}`;
+    const wwStart = new Date(cursor);
+    const defaultNapStart = addMins(wwStart, ww);
+
+    // Find a logged chain that starts closest to defaultNapStart (within 6h)
+    // and hasn't been used yet
+    const usedChainIds = new Set(slotItems.filter(s => s.chain).map(s => s.chain[0].id));
+    const chain = sortedChains.find(c => {
+      if (usedChainIds.has(c[0].id)) return false;
+      return Math.abs(new Date(c[0].start) - defaultNapStart) < 6 * 60 * 60 * 1000;
+    }) || null;
+
+    const napStart = chain ? new Date(chain[0].start) : new Date(defaultNapStart);
+    const napEnd = chain
+      ? (chain[chain.length-1].end ? new Date(chain[chain.length-1].end) : addMins(napStart, napDurDefault))
+      : addMins(napStart, (schedule.find(e => e.id === napId) || {}).napDurationMins || napDurDefault);
+
+    const schedWW = schedule.find(e => e.id === wwId) || {};
+    const wwItem = { id: wwId, kind: "scheduled", type: "wake", label: `Wake Window ${i+1}`,
+      start: wwStart, end: new Date(napStart), editable: true,
+      ...schedWW, start: wwStart, end: new Date(napStart) };
+
+    let napItem;
+    if (chain) {
+      const totalMs = chain.reduce((sum, s) => sum + (s.end ? new Date(s.end) - new Date(s.start) : 0), 0);
+      napItem = {
+        id: `nap-actual-${chain[0].id}`,
+        kind: chain.length > 1 ? "compoundNap" : "actualNap",
+        type: "nap", label: `Nap ${i+1}${chain.length > 1 ? " · Split" : ""}`,
+        subLabel: durationLabel(Math.round(totalMs / 6e4)),
+        start: napStart, end: napEnd, parts: chain
+      };
+    } else {
+      const schedNap = schedule.find(e => e.id === napId) || {};
+      napItem = { id: napId, kind: "scheduled", type: "nap", label: `Nap ${i+1}`,
+        editable: true, napDurationMins: napDurDefault,
+        ...schedNap, start: napStart, end: napEnd };
     }
+
+    slotItems.push({ wwItem, napItem, chain });
+    cursor = new Date(napEnd);
   }
 
-  // Build timeline items
+  // Final WW and Bedtime
+  const finalWWId = "ww-final";
+  const schedFinalWW = schedule.find(e => e.id === finalWWId) || {};
+  const defaultBed = addMins(cursor, ww);
+  // Respect user-edited final WW end (stored in schedule)
+  const storedFinalEnd = schedFinalWW.end ? new Date(schedFinalWW.end) : null;
+  const finalWWEnd = (storedFinalEnd && storedFinalEnd > cursor && Math.abs(storedFinalEnd - defaultBed) > 60000)
+    ? storedFinalEnd : defaultBed;
+  const finalWWItem = { id: finalWWId, kind: "scheduled", type: "wake",
+    label: `Wake Window ${numNaps+1}`, editable: true,
+    ...schedFinalWW, start: new Date(cursor), end: new Date(finalWWEnd) };
+  const schedBed = schedule.find(e => e.id === "bed") || {};
+  const bedItem = { id: "bed", kind: "scheduled", type: "sleep", label: "Bedtime",
+    editable: false, ...schedBed, start: new Date(finalWWEnd), end: null };
+
+  // Assemble allTimelineItems
   const allTimelineItems = [];
+
   // Night sleeps
-  nightSleeps.forEach((s, idx) => {
+  nightSleeps.forEach((s) => {
     const sStart = new Date(s.start);
     const sEnd = s.end ? new Date(s.end) : null;
     const todayMid = new Date(); todayMid.setHours(0,0,0,0);
     const isCross = sStart < todayMid;
     const durFrom = isCross ? todayMid : sStart;
     const durLbl = sEnd ? durationLabel(diffMins(durFrom, sEnd)) : null;
-    allTimelineItems.push({
-      id: `night-${s.id}`, kind: "nightSleep", type: "nightSleep",
-      label: "Night Sleep", subLabel: durLbl,
-      start: sStart, end: sEnd, raw: s, isCrossMidnight: isCross, durationStart: durFrom
-    });
+    allTimelineItems.push({ id: `night-${s.id}`, kind: "nightSleep", type: "nightSleep",
+      label: "Night Sleep", subLabel: durLbl, start: sStart, end: sEnd,
+      raw: s, isCrossMidnight: isCross, durationStart: durFrom });
   });
 
   // Wake-0
-  if (scheduledWake0) {
-    const w0 = { ...scheduledWake0, kind: "scheduled", _actualWakeTime: actualWake };
-    w0.start = new Date(actualWake); // display uses actualWake
-    allTimelineItems.push(w0);
-  }
+  const w0Item = { id: "wake-0", kind: "scheduled", type: "wake", label: "Wake Up",
+    editable: true, ...(scheduledWake0 || {}), start: new Date(actualWake), _actualWakeTime: actualWake };
+  allTimelineItems.push(w0Item);
 
-  // Cascade: WW → Nap → WW → Nap → ... → Final WW → Bed
-  let cursor = new Date(actualWake);
-  for (let i = 0; i < numNaps; i++) {
-    const slot = napSlots[i];
-    const wwId = `ww-${i}`;
-    const napId = `nap-${i}`;
-    // Find scheduled WW and nap in the stored schedule
-    const schedWW = schedule.find(e => e.id === wwId) || { id: wwId, type: "wake", label: `Wake Window ${i+1}`, editable: true };
-    const schedNap = schedule.find(e => e.id === napId) || { id: napId, type: "nap", label: `Nap ${i+1}`, editable: true, napDurationMins: napDurDefault };
-    const napDur = schedNap.napDurationMins || napDurDefault;
-
-    // WW: starts at cursor, ends at nap start
-    const napStart = addMins(cursor, ww);
-    const wwItem = { ...schedWW, kind: "scheduled", start: new Date(cursor), end: new Date(napStart) };
+  // WW + Nap slots
+  slotItems.forEach(({ wwItem, napItem }) => {
     allTimelineItems.push(wwItem);
+    allTimelineItems.push(napItem);
+  });
 
-    // Nap: logged or scheduled
-    const chain = compoundNapGroups[i];
-    if (chain) {
-      // Use actual logged times
-      const chainStart = new Date(chain[0].start);
-      const chainEnd = chain[chain.length-1].end ? new Date(chain[chain.length-1].end) : addMins(chainStart, napDur);
-      const totalMins = Math.round((chainEnd - chainStart) / 6e4);
-      allTimelineItems.push({
-        id: `nap-actual-${chain[0].id}`,
-        kind: chain.length > 1 ? "compoundNap" : "actualNap",
-        type: "nap", label: `Nap ${i+1}${chain.length > 1 ? " · Split" : ""}`,
-        subLabel: totalMins > 0 ? durationLabel(totalMins) : null,
-        start: chainStart, end: chainEnd, parts: chain
-      });
-      cursor = new Date(chainEnd);
-    } else {
-      // Scheduled (unlogged) nap
-      const napEnd = addMins(napStart, napDur);
-      allTimelineItems.push({
-        ...schedNap, kind: "scheduled",
-        start: new Date(napStart), end: new Date(napEnd)
-      });
-      cursor = new Date(napEnd);
-    }
-  }
+  // Final WW + Bed
+  allTimelineItems.push(finalWWItem);
+  allTimelineItems.push(bedItem);
 
-  // Final WW
-  const finalWWId = "ww-final";
-  const schedFinalWW = schedule.find(e => e.id === finalWWId) || { id: finalWWId, type: "wake", label: `Wake Window ${numNaps+1}`, editable: true };
-  // If user manually set final WW end (i.e. stored end differs from cursor+ww by more than 1 min), respect it
-  const defaultBed = addMins(cursor, ww);
-  const storedFinalWWEnd = schedFinalWW.end ? new Date(schedFinalWW.end) : null;
-  const finalWWEnd = (storedFinalWWEnd && Math.abs(storedFinalWWEnd - defaultBed) > 60000)
-    ? storedFinalWWEnd : defaultBed;
-  allTimelineItems.push({ ...schedFinalWW, kind: "scheduled", start: new Date(cursor), end: new Date(finalWWEnd) });
-
-  // Bedtime
-  const bedItem = schedule.find(e => e.id === "bed") || { id: "bed", type: "sleep", label: "Bedtime", editable: false };
-  allTimelineItems.push({ ...bedItem, kind: "scheduled", start: new Date(finalWWEnd), end: null });
-
-  // Orphan feeds (feeds not in any WW window)
+  // Orphan feeds (outside any WW window)
   bottleFeeds.forEach(f => {
     const t = strToDate(f.time);
-    const inWW = allTimelineItems.some(ev => {
-      if (ev.type !== "wake" && ev.kind !== "scheduled") return false;
-      return ev.start <= t && ev.end && t < ev.end;
-    });
-    if (!inWW) {
-      allTimelineItems.push({ id: `orphan-feed-${f.id}`, kind: "orphanFeed", type: "feed", start: t, raw: f });
-    }
+    const inWW = allTimelineItems.some(ev =>
+      ev.type === "wake" && ev.id !== "wake-0" && ev.start <= t && ev.end && t < ev.end
+    );
+    if (!inWW) allTimelineItems.push({ id: `orphan-feed-${f.id}`, kind: "orphanFeed", type: "feed", start: t, raw: f });
   });
 
   allTimelineItems.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -1928,10 +1922,11 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     const completedNapMins = sleeps.filter((s) => {
       if (!s.end || new Date(s.start) < midnight) return false;
       if (s.isNight) return false;
+      // Exclude anything that starts before wake time or is a night sleep
+      const wakeH2 = (scheduleSettings && scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
       const h = new Date(s.start).getHours();
-      const bedH2 = (scheduleSettings == null ? void 0 : scheduleSettings.bedTime) ? parseInt(scheduleSettings.bedTime.split(":")[0]) : 19;
-      const wakeH2 = (scheduleSettings == null ? void 0 : scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
-      return !(h >= bedH2 || h < wakeH2);
+      if (h < wakeH2) return false;
+      return true;
     }).reduce((sum, s) => sum + diffMins(new Date(s.start), new Date(s.end)), 0);
     const activeNapMins = activeSleep ? diffMins(activeSleep.start, now2) : 0;
     const totalNapMins = completedNapMins + activeNapMins;
