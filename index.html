@@ -2619,13 +2619,13 @@ Duration: ${durationLabel(diffMins(ev.start, ev.end))}` : fmt12(ev.start), type:
         detail: `Start: ${fmt12(new Date(s.start))}
 End: ${fmt12(new Date(s.end))}
 Duration: ${durationLabel(diffMins(new Date(s.start), new Date(s.end)))}`,
-        type: "sleep"
+        type: "sleep", rawId: s.id
       });
     });
     sel.feeds.forEach((f) => {
       const vol = parseFloat(f.consumed || f.offered || 0);
       const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
-      allItems.push({ time: strToDate(f.time, sel.date), icon: "\u{1F37C}", label: `${ml}ml`, bg: PAL.feedLight, detail: fmt12(strToDate(f.time, sel.date)), type: "feed" });
+      allItems.push({ time: strToDate(f.time, sel.date), icon: "\u{1F37C}", label: `${ml}ml`, bg: PAL.feedLight, detail: fmt12(strToDate(f.time, sel.date)), type: "feed", rawId: f.id });
     });
     allItems.sort((a, b) => a.time - b.time);
     if (allItems.length === 0) return /* @__PURE__ */ React.createElement("p", { style: { color: PAL.muted, fontSize: 13, textAlign: "center", margin: 0 } }, "No data logged for this day");
