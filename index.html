@@ -1792,7 +1792,14 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       return true;
     })
     .sort((a, b) => new Date(a[0].start) - new Date(b[0].start));
-  console.log("✅ sortedChains:", sortedChains.length, sortedChains.map(c => new Date(c[0].start).toTimeString().slice(0,5)));
+  // Deduplicate chains within 2 minutes of each other (double-save artifacts)
+  const dedupedChains = [];
+  sortedChains.forEach(chain => {
+    const cs = new Date(chain[0].start);
+    const isDupe = dedupedChains.some(dc => Math.abs(new Date(dc[0].start) - cs) < 2 * 60 * 1000);
+    if (!isDupe) dedupedChains.push(chain);
+  });
+  console.log("✅ dedupedChains:", dedupedChains.map(c => new Date(c[0].start).toTimeString().slice(0,5)));
 
   // Cascade: for each slot 0..numNaps-1, use logged chain if available, else scheduled/default
   // cursor tracks end of last nap to derive WW starts
@@ -1808,13 +1815,15 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     // Find a logged chain that starts closest to defaultNapStart (within 6h)
     // and hasn't been used yet
     const usedChainIds = new Set(slotItems.filter(s => s.chain).map(s => s.chain[0].id));
-    // Match closest unused day-nap chain to this slot
-    const chain = sortedChains.find(c => {
-      if (usedChainIds.has(c[0].id)) return false;
-      const cs = new Date(c[0].start);
-      if (cs < actualWake) return false; // must be after wake
-      return Math.abs(cs - defaultNapStart) < 4 * 60 * 60 * 1000;
-    }) || null;
+    // Match closest unused deduped chain to this slot (pick nearest, not just first)
+    const chain = dedupedChains
+      .filter(c => {
+        if (usedChainIds.has(c[0].id)) return false;
+        const cs = new Date(c[0].start);
+        if (cs < actualWake) return false;
+        return Math.abs(cs - defaultNapStart) < 4 * 60 * 60 * 1000;
+      })
+      .sort((a, b) => Math.abs(new Date(a[0].start) - defaultNapStart) - Math.abs(new Date(b[0].start) - defaultNapStart))[0] || null;
 
     const napStart = chain ? new Date(chain[0].start) : new Date(defaultNapStart);
     const napEnd = chain
