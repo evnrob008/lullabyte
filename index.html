@@ -943,7 +943,7 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
   const initStartDay = event.start ? (new Date(event.start).toDateString() === yesterday.toDateString() ? "yesterday" : "today") : "today";
   const initEndDay = event.end ? (new Date(event.end).toDateString() === yesterday.toDateString() ? "yesterday" : "today") : "today";
-  const [startTime, setStartTime] = useState(toTimeInput(new Date(event.start)));
+  const [startTime, setStartTime] = useState(toTimeInput(event._actualWakeTime ? new Date(event._actualWakeTime) : new Date(event.start)));
   const [endTime, setEndTime] = useState(event.end ? toTimeInput(new Date(event.end)) : "");
   const [startDay, setStartDay] = useState(initStartDay);
   const [endDay, setEndDay] = useState(initEndDay);
@@ -1008,7 +1008,10 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
       fsSet(uid, "settings", newSettings);
       localStorage.setItem("lb_settings", JSON.stringify(newSettings));
       onSaveSettings && onSaveSettings(newSettings);
-      onSave(generateSchedule(newSettings));
+      // Mark the new schedule with _manualWakeTime so display pass respects it
+      const newSched = generateSchedule(newSettings);
+      const schedWithFlag = newSched.map((e) => e.id === "wake-0" ? __spreadProps(__spreadValues({}, e), { _manualWakeTime: true }) : e);
+      onSave(schedWithFlag);
       onClose();
       return;
     } else if (event.type === "wake") {
@@ -1838,8 +1841,11 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
   }, new Date(0));
   const wake0 = allTimelineItems.find((e) => e.id === "wake-0");
   const scheduledWakeTime = wake0 ? new Date(wake0.start) : new Date();
-  const actualWakeTime = (lastNightSleepEnd > new Date(0) && lastNightSleepEnd > scheduledWakeTime)
-    ? lastNightSleepEnd : scheduledWakeTime;
+  // If user manually set wake time, respect it; otherwise use max(scheduled, nightSleepEnd)
+  const actualWakeTime = (wake0 && wake0._manualWakeTime)
+    ? scheduledWakeTime
+    : (lastNightSleepEnd > new Date(0) && lastNightSleepEnd > scheduledWakeTime)
+      ? lastNightSleepEnd : scheduledWakeTime;
   if (wake0) {
     wake0._actualWakeTime = actualWakeTime;
   }
