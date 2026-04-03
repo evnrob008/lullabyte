@@ -1781,8 +1781,18 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     ? new Date(scheduledWakeTime)
     : (lastNightEnd > scheduledWakeTime ? new Date(lastNightEnd) : new Date(scheduledWakeTime));
 
-  // Sort logged day-nap chains by start time
-  const sortedChains = [...compoundNapGroups].sort((a, b) => new Date(a[0].start) - new Date(b[0].start));
+  // Sort logged day-nap chains by start time - only day naps
+  console.log("🍼 napGroups:", compoundNapGroups.length, compoundNapGroups.map(c => ({t: new Date(c[0].start).toTimeString().slice(0,5), isNight: c[0].isNight || todaySleeps.find(s=>s.id===c[0].id)?.isNight})));
+  const sortedChains = [...compoundNapGroups]
+    .filter(chain => {
+      const rootSleep = todaySleeps.find(s => s.id === chain[0].id);
+      if (rootSleep && rootSleep.isNight) return false;
+      const h = new Date(chain[0].start).getHours();
+      if (h < wakeHour) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(a[0].start) - new Date(b[0].start));
+  console.log("✅ sortedChains:", sortedChains.length, sortedChains.map(c => new Date(c[0].start).toTimeString().slice(0,5)));
 
   // Cascade: for each slot 0..numNaps-1, use logged chain if available, else scheduled/default
   // cursor tracks end of last nap to derive WW starts
