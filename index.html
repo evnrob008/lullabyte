@@ -1798,9 +1798,12 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     // Find a logged chain that starts closest to defaultNapStart (within 6h)
     // and hasn't been used yet
     const usedChainIds = new Set(slotItems.filter(s => s.chain).map(s => s.chain[0].id));
+    // Match closest unused day-nap chain to this slot
     const chain = sortedChains.find(c => {
       if (usedChainIds.has(c[0].id)) return false;
-      return Math.abs(new Date(c[0].start) - defaultNapStart) < 6 * 60 * 60 * 1000;
+      const cs = new Date(c[0].start);
+      if (cs < actualWake) return false; // must be after wake
+      return Math.abs(cs - defaultNapStart) < 4 * 60 * 60 * 1000;
     }) || null;
 
     const napStart = chain ? new Date(chain[0].start) : new Date(defaultNapStart);
