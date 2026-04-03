@@ -2042,44 +2042,43 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       onUpdateStart: (newStart) => setActiveSleep((prev) => __spreadProps(__spreadValues({}, prev), { start: newStart })),
       onEnd: (napStart, napEnd, linkedToId) => {
         const napId = Date.now();
-        const endH = new Date(napEnd).getHours();
         const startH = new Date(napStart).getHours();
-        const bedH2 = (scheduleSettings == null ? void 0 : scheduleSettings.bedTime) ? parseInt(scheduleSettings.bedTime.split(":")[0]) : 19;
-        const wakeH2 = (scheduleSettings == null ? void 0 : scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
-        const isNightTimer = startH >= bedH2 || startH < wakeH2;
-        isLocalEndRef.current = true; // prevent listener double-save
+        const wakeH2 = (scheduleSettings && scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
+        const isNightTimer = startH < wakeH2 || startH >= 21;
+        isLocalEndRef.current = true;
         onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: isNightTimer, linkedToId: linkedToId || null });
-        if (isNightTimer) {
-          setActiveSleep(null);
-          return;
+        if (isNightTimer) { setActiveSleep(null); return; }
+        // Snap to nearest unlogged nap slot and cascade
+        const numNaps2 = (scheduleSettings && scheduleSettings.numNaps) || 3;
+        const ww2 = (scheduleSettings && scheduleSettings.wakeWindowMins) || 180;
+        const nd2 = (scheduleSettings && scheduleSettings.napDurationMins) || 35;
+        let bestIdx = -1, bestDiff = Infinity;
+        for (let si = 0; si < numNaps2; si++) {
+          const slot = schedule.find(e => e.id === `nap-${si}`);
+          if (!slot || slot._recorded) continue;
+          const diff = Math.abs(new Date(slot.start) - napStart);
+          if (diff < bestDiff) { bestDiff = diff; bestIdx = si; }
         }
-        if (linkedToId) {
-          const allNapSleeps = [...todaySleeps, { id: napId, start: napStart, end: napEnd, linkedToId }];
-          let rootId = linkedToId;
-          for (let i = 0; i < 10; i++) {
-            const parent = allNapSleeps.find((s) => s.id === rootId);
-            if (!parent || !parent.linkedToId) break;
-            rootId = parent.linkedToId;
-          }
-          const rootSleep = allNapSleeps.find((s) => s.id === rootId);
-          if (rootSleep) {
-            const idx = schedule.findIndex((ev) => ev.type === "nap" && ev._recorded && Math.abs(new Date(ev.start) - new Date(rootSleep.start)) < 60 * 60 * 1e3);
-            if (idx >= 0) {
-              const updated = schedule.map((ev, i) => i === idx ? __spreadProps(__spreadValues({}, ev), { end: napEnd }) : ev);
-              onUpdateSchedule(rebuildFromIndex(updated, idx, scheduleSettings));
+        if (bestIdx >= 0) {
+          const newSched = schedule.map(e => ({ ...e }));
+          const slotI = newSched.findIndex(e => e.id === `nap-${bestIdx}`);
+          if (slotI >= 0) {
+            newSched[slotI] = { ...newSched[slotI], start: napStart, end: napEnd, _recorded: true, napDurationMins: diffMins(napStart, napEnd) };
+            let cur = new Date(napEnd);
+            for (let si = bestIdx + 1; si < numNaps2; si++) {
+              const nns = addMins(cur, ww2), nne = addMins(nns, nd2);
+              const wwI = newSched.findIndex(e => e.id === `ww-${si}`);
+              const napI = newSched.findIndex(e => e.id === `nap-${si}`);
+              if (wwI >= 0) newSched[wwI] = { ...newSched[wwI], start: new Date(cur), end: new Date(nns) };
+              if (napI >= 0) newSched[napI] = { ...newSched[napI], start: new Date(nns), end: new Date(nne) };
+              cur = new Date(nne);
             }
-          }
-        } else {
-          const unrecorded = schedule.map((ev, idx) => ({ ev, idx })).filter(({ ev }) => ev.type === "nap" && !ev._recorded);
-          if (unrecorded.length > 0) {
-            const { idx: napIdx } = unrecorded.reduce((best, cur) => {
-              const diff = Math.abs(new Date(cur.ev.start) - napStart);
-              return diff < best.diff ? __spreadProps(__spreadValues({}, cur), { diff }) : best;
-            }, { diff: Infinity, idx: -1 });
-            if (napIdx >= 0) {
-              const updated = schedule.map((ev, i) => i === napIdx ? __spreadProps(__spreadValues({}, ev), { start: napStart, end: napEnd, _recorded: true, originalDurationMins: Math.max(ev.originalDurationMins || 0, diffMins(napStart, napEnd)) }) : ev);
-              onUpdateSchedule(rebuildFromIndex(updated, napIdx, scheduleSettings));
-            }
+            const fwI = newSched.findIndex(e => e.id === "ww-final");
+            const bI = newSched.findIndex(e => e.id === "bed");
+            const nb = addMins(cur, ww2);
+            if (fwI >= 0) newSched[fwI] = { ...newSched[fwI], start: new Date(cur), end: new Date(nb) };
+            if (bI >= 0) newSched[bI] = { ...newSched[bI], start: new Date(nb) };
+            onUpdateSchedule(newSched);
           }
         }
         setActiveSleep(null);
@@ -2333,7 +2332,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     setEditFeed(null);
   } }), showNightSleep && /* @__PURE__ */ React.createElement(SleepModal, { isNight: true, onSave: onSaveSleep, onClose: () => setShowNightSleep(false) }));
 }
-function SummaryTab({ feeds, sleeps, moods, scheduleSettings, currentSchedule, onClearDay }) {
+function SummaryTab({ feeds, sleeps, moods, scheduleSettings, currentSchedule, onClearDay, onDeleteSleep, onDeleteFeed }) {
   const [range, setRange] = useState("7");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
