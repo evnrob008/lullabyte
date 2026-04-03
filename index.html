@@ -1836,7 +1836,14 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       } else if (nextUnlogged) {
         ev.end = new Date(nextUnlogged.start);
       } else {
-        ev.end = addMins(new Date(ev.start), ww);
+        // Final WW: end = start + ww, but use bedtime if it makes more sense
+        const bedEvP3 = allTimelineItems.find(e => e.id === "bed");
+        const autoEnd = addMins(new Date(ev.start), ww);
+        if (bedEvP3 && new Date(bedEvP3.start) > new Date(ev.start)) {
+          ev.end = new Date(bedEvP3.start);
+        } else {
+          ev.end = autoEnd;
+        }
       }
     }
   });
@@ -2731,7 +2738,7 @@ function App() {
       if (doc.exists) {
         try {
           const data = JSON.parse(doc.data().value);
-          const parsed = data.map((e) => ({ ...e, start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null }));
+          const parsed = data.map((e) => ({ ...e, start: e.start ? new Date(e.start) : null, end: e.end ? new Date(e.end) : null, _manualBedtime: false }));
           setSchedule(parsed);
           localStorage.setItem(`lb_schedule_${uid}`, JSON.stringify(data));
         } catch (e) {}
