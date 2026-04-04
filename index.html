@@ -898,7 +898,7 @@ function FeedModal({ onSave, onClose, initial, onDelete }) {
     onClose();
   }, style: { flex: 1, padding: "10px", borderRadius: 9, border: "none", background: "#E57373", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Delete"), /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmDelete(false), style: { flex: 1, padding: "10px", borderRadius: 9, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Cancel")))));
 }
-function SleepModal({ onSave, onClose, initial, isNight, onDelete, linkableSleeps }) {
+function SleepModal({ onSave, onClose, initial, isNight, onDelete, onResume, linkableSleeps }) {
   const today = new Date();
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
   // Determine initial day offsets from existing start/end dates
@@ -946,7 +946,7 @@ function SleepModal({ onSave, onClose, initial, isNight, onDelete, linkableSleep
     /* @__PURE__ */ React.createElement("h3", { style: { margin: 0, fontFamily: "'Figtree', sans-serif", color: PAL.text } }, isNight ? "\u{1F319} Night Sleep" : "\u{1F4A4} Nap"),
     (initial == null ? void 0 : initial.id) && onDelete && !confirmDeleteSleep && /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmDeleteSleep(true),
       style: { fontSize: 13, padding: "5px 10px", borderRadius: 8, border: "1.5px solid #E57373", background: "transparent", color: "#E57373", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }
-    }, "\uD83D\uDDD1\uFE0F Delete")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Sleep start"), /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: start, onChange: (e) => setStart(e.target.value) }), isNight && dayToggle(startDay, setStartDay)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Wake up (leave blank if still sleeping)"), /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: end, onChange: (e) => setEnd(e.target.value) }), isNight && end && dayToggle(endDay, setEndDay)), linkOptions.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, marginBottom: 8 } }, "Link to previous nap (split nap)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setLinkedToId(null), style: { padding: "8px 12px", borderRadius: 9, border: `1.5px solid ${!linkedToId ? PAL.sleep : PAL.border}`, background: !linkedToId ? PAL.sleepLight : "transparent", color: !linkedToId ? PAL.sleep : PAL.muted, fontWeight: !linkedToId ? 700 : 500, cursor: "pointer", fontFamily: "inherit", fontSize: 13, textAlign: "left" } }, "No link (standalone nap)"), linkOptions.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, onClick: () => setLinkedToId(s.id), style: { padding: "8px 12px", borderRadius: 9, border: `1.5px solid ${linkedToId === s.id ? PAL.sleep : PAL.border}`, background: linkedToId === s.id ? PAL.sleepLight : "transparent", color: linkedToId === s.id ? PAL.sleep : PAL.text, fontWeight: linkedToId === s.id ? 700 : 500, cursor: "pointer", fontFamily: "inherit", fontSize: 13, textAlign: "left" } }, "\u{1F4A4} ", fmt12(new Date(s.start)), s.end ? " \u2192 " + fmt12(new Date(s.end)) : " (ongoing)")))), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, (initial == null ? void 0 : initial.id) ? "Update Nap" : "Save Nap"),  confirmDeleteSleep && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 4, background: "#FFF0F0", borderRadius: 11, padding: "12px", border: "1.5px solid #E57373" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#E57373", fontWeight: 600, marginBottom: 10 } }, "Delete this nap?"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => { onDelete(initial.id); onClose(); }, style: { flex: 1, padding: "10px", borderRadius: 9, border: "none", background: "#E57373", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Delete"), /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmDeleteSleep(false), style: { flex: 1, padding: "10px", borderRadius: 9, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Cancel")))));
+    }, "\uD83D\uDDD1\uFE0F Delete")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Sleep start"), /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: start, onChange: (e) => setStart(e.target.value) }), isNight && dayToggle(startDay, setStartDay)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Wake up (leave blank if still sleeping)"), /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: end, onChange: (e) => setEnd(e.target.value) }), isNight && end && dayToggle(endDay, setEndDay)), linkOptions.length > 0 && /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Link to previous nap (split nap)", /* @__PURE__ */ React.createElement("select", { value: linkedToId || "", onChange: (e) => setLinkedToId(e.target.value || null), style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "No link (standalone nap)"), linkOptions.map((s) => /* @__PURE__ */ React.createElement("option", { key: s.id, value: String(s.id) }, fmt12(new Date(s.start)), s.end ? " \u2192 " + fmt12(new Date(s.end)) : " (ongoing)")))), (initial == null ? void 0 : initial.id) && (initial == null ? void 0 : initial.end) && !isNight && onResume && /* @__PURE__ */ React.createElement("button", { onClick: () => { onResume(initial); onClose(); }, style: { padding: "13px", borderRadius: 11, border: `1.5px solid ${PAL.sleep}`, background: "transparent", color: PAL.sleep, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" } }, "\u25B6\uFE0F Resume Nap"), /* @__PURE__ */ React.createElement("button", { onClick: save, style: { padding: "13px", borderRadius: 11, border: "none", background: PAL.sleep, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", marginTop: 4 } }, (initial == null ? void 0 : initial.id) ? "Update Nap" : "Save Nap"),  confirmDeleteSleep && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 4, background: "#FFF0F0", borderRadius: 11, padding: "12px", border: "1.5px solid #E57373" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: "#E57373", fontWeight: 600, marginBottom: 10 } }, "Delete this nap?"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => { onDelete(initial.id); onClose(); }, style: { flex: 1, padding: "10px", borderRadius: 9, border: "none", background: "#E57373", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Delete"), /* @__PURE__ */ React.createElement("button", { onClick: () => setConfirmDeleteSleep(false), style: { flex: 1, padding: "10px", borderRadius: 9, border: `1.5px solid ${PAL.border}`, background: "transparent", color: PAL.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 14 } }, "Cancel")))));
 }
 function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSettings, onClose }) {
   const [startTime, setStartTime] = useState(toTimeInput(event._actualWakeTime ? new Date(event._actualWakeTime) : new Date(event.start)));
@@ -2341,6 +2341,12 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       initial: editSleep,
       isNight: editSleep.isNight || false,
       linkableSleeps: todaySleeps.filter((s) => s.id !== editSleep.id && s.end && !s.linkedToId),
+      onResume: (nap) => {
+        // Resume: start a new timer linked to this nap, starting from nap end time
+        const resumeStart = nap.end ? new Date(nap.end) : new Date();
+        setActiveSleep({ start: resumeStart, linkedToId: nap.id });
+        setEditSleep(null);
+      },
       onDelete: (id) => {
         onDeleteSleep(id);
         const defaultNapDur = (scheduleSettings && scheduleSettings.napDurationMins) || 35;
@@ -3057,11 +3063,12 @@ function App() {
         const start = new Date(p.start);
         const ageHrs = (Date.now() - start) / 3600000;
         const isToday = start.toDateString() === new Date().toDateString();
-        // Only restore if started today and less than 4 hours ago
-        if (isToday && ageHrs < 4) {
+        // Restore if started today OR started yesterday (cross-midnight night sleep)
+        // Allow up to 14 hours to cover long night sleeps
+        if (ageHrs < 14) {
           return __spreadProps(__spreadValues({}, p), { start });
         }
-        // Stale — clear it
+        // Too old — clear it
         localStorage.removeItem("lb_active_sleep");
       }
     } catch (e) {
@@ -3075,7 +3082,7 @@ function App() {
     const current = activeSleepRef.current;
     if (!current || !current.start) return;
     const ageHrs = (Date.now() - new Date(current.start)) / 3600000;
-    if (ageHrs > 8) {
+    if (ageHrs > 16) {
       // Too old to be a real active timer — clear without saving
       setActiveSleep(null);
     }
@@ -3154,10 +3161,11 @@ function App() {
             const napStart = new Date(data.start);
             const ageHrs = (Date.now() - napStart) / 3600000;
             const isToday = napStart.toDateString() === new Date().toDateString();
-            if (isToday && ageHrs < 4) {
+            // Allow if within 14 hours (covers night sleeps crossing midnight)
+            if (ageHrs < 14) {
               setActiveSleep({ ...data, start: napStart });
             } else {
-              // Stale Firestore doc — delete it and ignore
+              // Too old — delete stale doc
               doc.ref.delete().catch(() => {});
             }
           } else {
@@ -3172,11 +3180,13 @@ function App() {
           const napEnd = new Date();
           const napStart = new Date(current.start);
           const napId = Date.now();
-          const bedH = parseInt((JSON.parse(localStorage.getItem("lb_settings") || "{}").bedTime || "19:30").split(":")[0]);
           const wakeH = parseInt((JSON.parse(localStorage.getItem("lb_settings") || "{}").wakeTime || "07:00").split(":")[0]);
           const startH = napStart.getHours();
-          const isNight = startH >= bedH || startH < wakeH;
+          const isNight = startH < wakeH || startH >= 21;
           setSleeps((prev) => {
+            // Dedup: don't add if a sleep with same start time already exists
+            const alreadyExists = prev.some(s => Math.abs(new Date(s.start) - napStart) < 5000);
+            if (alreadyExists) return prev;
             const next = [...prev, { id: napId, start: napStart, end: napEnd, isNight, autoSaved: true }];
             const writeUid = localStorage.getItem("lb_data_uid") || JSON.parse(localStorage.getItem("lb_user") || "{}").uid || "default";
             fsSetArray(writeUid, "sleeps", next);
@@ -3307,12 +3317,16 @@ function App() {
   }), []);
   const saveSleep = useCallback((s) => setSleeps((prev) => {
     const next = (() => {
-      const idx = prev.findIndex((x) => x.id === s.id);
+      // Dedup by id (string-safe)
+      const idx = prev.findIndex((x) => String(x.id) === String(s.id));
       if (idx >= 0) {
         const n = [...prev];
         n[idx] = s;
         return n;
       }
+      // Also dedup by near-identical start time (within 5s) to prevent double-saves
+      const nearDup = s.end && prev.some(x => x.end && Math.abs(new Date(x.start) - new Date(s.start)) < 5000 && Math.abs(new Date(x.end) - new Date(s.end)) < 5000);
+      if (nearDup) return prev;
       return [...prev, s];
     })();
     const linked = localStorage.getItem("lb_data_uid");
