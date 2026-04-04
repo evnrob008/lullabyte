@@ -2036,10 +2036,11 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     const now2 = /* @__PURE__ */ new Date();
     const midnight = new Date(now2);
     midnight.setHours(0, 0, 0, 0);
+    const now3 = new Date();
     const completedNapMins = sleeps.filter((s) => {
       if (!s.end || new Date(s.start) < midnight) return false;
+      if (new Date(s.end) > now3) return false; // not yet finished
       if (s.isNight) return false;
-      // Exclude anything that starts before wake time or is a night sleep
       const wakeH2 = (scheduleSettings && scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
       const h = new Date(s.start).getHours();
       if (h < wakeH2) return false;
@@ -2049,9 +2050,9 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
     const totalNapMins = completedNapMins + activeNapMins;
     const todayDateStr = localDateStr();
     const totalFeedMl = feeds.filter((f) => {
-      if (f.date) return f.date === todayDateStr;
+      if (f.date && f.date !== todayDateStr) return false;
       const d = strToDate(f.time);
-      return d >= midnight;
+      return d >= midnight && d <= now3;
     }).reduce((sum, f) => {
       if (f.type === "formula") {
         const vol = parseFloat(f.consumed || f.offered || 0);
