@@ -348,6 +348,7 @@ const DEFAULT_SETTINGS = {
   napDurationMins: 35
 };
 const getDB = () => window.firestoreDB || null;
+let _isLocalEnd = false; // prevents double-save when this device ends nap timer
 const fsSet = async (uid, collection, data) => {
   try {
     const str = JSON.stringify(data);
@@ -2045,7 +2046,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         const startH = new Date(napStart).getHours();
         const wakeH2 = (scheduleSettings && scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
         const isNightTimer = startH < wakeH2 || startH >= 21;
-        isLocalEndRef.current = true;
+        _isLocalEnd = true;
         onSaveSleep({ id: napId, start: napStart, end: napEnd, isNight: isNightTimer, linkedToId: linkedToId || null });
         if (isNightTimer) { setActiveSleep(null); return; }
         // Snap to nearest unlogged nap slot and cascade
@@ -2822,7 +2823,6 @@ function App() {
     return null;
   });
   const activeSleepRef = useRef(activeSleep);
-  const isLocalEndRef = useRef(false); // true when THIS device ends the timer
   useEffect(() => { activeSleepRef.current = activeSleep; }, [activeSleep]);
   // On startup, if activeSleep is restored but very old (>8hrs), auto-save and clear it
   useEffect(() => {
@@ -2912,7 +2912,7 @@ function App() {
         } catch (e) {}
       } else {
         // Doc was deleted — if we have an active timer, auto-save the sleep
-        if (isLocalEndRef.current) { isLocalEndRef.current = false; return; } // this device already saved
+        if (_isLocalEnd) { _isLocalEnd = false; return; } // this device already saved
         const current = activeSleepRef.current;
         if (current && current.start) {
           const napEnd = new Date();
@@ -3094,7 +3094,7 @@ function App() {
       onDeleteFeed: deleteFeed,
       onDeleteSleep: deleteSleep,
       moods,
-      onSaveMood: saveMood
+      onSaveMood: saveMood,
     }
   ), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps, moods, scheduleSettings, currentSchedule: schedule, onClearDay: clearDay, onDeleteSleep: deleteSleep, onDeleteFeed: deleteFeed }), tab === "settings" && /* @__PURE__ */ React.createElement(
     SettingsTab,
