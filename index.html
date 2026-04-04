@@ -950,7 +950,7 @@ function SleepModal({ onSave, onClose, initial, isNight, onDelete, onResume, lin
 }
 function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSettings, onClose }) {
   const [startTime, setStartTime] = useState(toTimeInput(event._actualWakeTime ? new Date(event._actualWakeTime) : new Date(event.start)));
-  const [endTime, setEndTime] = useState(event.end ? toTimeInput(new Date(event.end)) : "");
+  const [endTime, setEndTime] = useState(event.id === "bed" ? toTimeInput(new Date(event.start)) : (event.end ? toTimeInput(new Date(event.end)) : ""));
   const [durInput, setDurInput] = useState(() => {
     if (event.type === "nap" && event.start && event.end)
       return String(diffMins(new Date(event.start), new Date(event.end)));
@@ -1067,10 +1067,10 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
   if (event.id === "bed") {
     // Editing bedtime = editing ww-final end time
     const finalWW = allEvents.find(e => e.id === "ww-final");
-    const bedStart = new Date(event.start);
+    const bedStart = new Date(event.start); // current bedtime
     const saveBed = () => {
       const newBedTime = strToDate(endTime, bedStart);
-      if (newBedTime <= bedStart) newBedTime.setDate(newBedTime.getDate() + 1);
+      if (newBedTime <= new Date(bedStart.getFullYear(), bedStart.getMonth(), bedStart.getDate(), 12)) newBedTime.setDate(newBedTime.getDate() + 1);
       const updated = allEvents.map(e => ({ ...e }));
       const wwIdx = updated.findIndex(e => e.id === "ww-final");
       const bedIdx = updated.findIndex(e => e.id === "bed");
@@ -2260,7 +2260,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
           opacity: isPast && ev.id !== "wake-0" && ev.id !== "bed" ? 0.7 : 1,
           transition: "all 0.3s"
         },
-        onClick: () => { if (ev.id === "wake-0") { setEditEvent(ev); } else if (ev.id === "bed") { const finalWW = allTimelineItems.find(e => e.id === "ww-final"); if (finalWW) setEditEvent(finalWW); } else if (isPast || isFuture) { setExpandedPastEvents((prev) => { const next = new Set(prev); if (next.has(ev.id)) next.delete(ev.id); else next.add(ev.id); return next; }); } else if (isScheduled && ev.editable) { setEditEvent(ev); } }
+        onClick: () => { if (ev.id === "wake-0") { setEditEvent(ev); } else if (ev.id === "bed") { setEditEvent(ev); } else if (isPast || isFuture) { setExpandedPastEvents((prev) => { const next = new Set(prev); if (next.has(ev.id)) next.delete(ev.id); else next.add(ev.id); return next; }); } else if (isScheduled && ev.editable) { setEditEvent(ev); } }
       },
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, isLive && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: c.dot, background: c.dot + "22", borderRadius: 6, padding: "2px 6px", letterSpacing: 0.5 } }, "NOW"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: isLive ? 800 : (isPast && !expandedPastEvents.has(ev.id)) ? 400 : (isFuture && !expandedPastEvents.has(ev.id)) ? 500 : 700, fontSize: isLive ? 15 : (isPast && !expandedPastEvents.has(ev.id)) || (isFuture && !expandedPastEvents.has(ev.id)) ? 13 : 14, color: ev.id === "bed" ? "#ffffff" : ev.id === "wake-0" ? "#5a4000" : (isPast && !expandedPastEvents.has(ev.id)) ? PAL.muted : (isFuture && !expandedPastEvents.has(ev.id)) ? PAL.muted : PAL.text } }, ev.label), ((isPast && !expandedPastEvents.has(ev.id)) || (isFuture && !expandedPastEvents.has(ev.id))) && ev.type === "wake" && ev.id !== "wake-0" && (() => { const _s = new Date(ev.start); const _nxt = allTimelineItems.slice(i + 1).find((e) => e.type === "nap" || e.type === "sleep" || e.kind === "actualNap" || e.kind === "compoundNap"); const _e = _nxt ? new Date(_nxt.start) : new Date(864e13); const _fs = bottleFeeds.filter((f) => { const t = strToDate(f.time); return t >= _s && t < _e; }); if (!_fs.length) return null; const icons = _fs.map((f) => f.type === "solids" ? "\uD83E\uDD44" : "\uD83C\uDF7C");
           const otherIcons = todayOthers.filter((o) => { const t = strToDate(o.time); return t >= _s && t < _e; }).map(() => "\uD83D\uDC8A");
