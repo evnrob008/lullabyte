@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1000,7 +999,7 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
           const nextWWI = updated.findIndex(e => e.id === `ww-${si}`);
           const nextNapI = updated.findIndex(e => e.id === `nap-${si}`);
           if (nextWWI >= 0) updated[nextWWI] = __spreadProps(__spreadValues({}, updated[nextWWI]), { start: new Date(cur), end: new Date(nextNapStart) });
-          if (nextNapI >= 0) updated[nextNapI] = __spreadProps(__spreadValues({}, updated[nextNapI]), { start: new Date(nextNapStart), end: new Date(nextNapEnd) });
+          if (nextNapI >= 0) updated[nextNapI] = __spreadProps(__spreadValues({}, updated[nextNapI]), { start: new Date(nextNapStart), end: new Date(nextNapEnd), _recorded: false });
           cur = new Date(nextNapEnd);
         }
         const finalWWI = updated.findIndex(e => e.id === "ww-final");
@@ -1025,7 +1024,7 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
         const wwI = updated.findIndex(e => e.id === `ww-${si}`);
         const napI = updated.findIndex(e => e.id === `nap-${si}`);
         if (wwI >= 0) updated[wwI] = __spreadProps(__spreadValues({}, updated[wwI]), { start: new Date(cur), end: new Date(nextNapStart) });
-        if (napI >= 0) updated[napI] = __spreadProps(__spreadValues({}, updated[napI]), { start: new Date(nextNapStart), end: new Date(nextNapEnd) });
+        if (napI >= 0) updated[napI] = __spreadProps(__spreadValues({}, updated[napI]), { start: new Date(nextNapStart), end: new Date(nextNapEnd), _recorded: false });
         cur = new Date(nextNapEnd);
       }
       const finalWWI = updated.findIndex(e => e.id === "ww-final");
@@ -1127,7 +1126,7 @@ function EditEventModal({ event, scheduleSettings, allEvents, onSave, onSaveSett
           const nextWWI = updated.findIndex(e => e.id === `ww-${si}`);
           const nextNapI = updated.findIndex(e => e.id === `nap-${si}`);
           if (nextWWI >= 0) updated[nextWWI] = __spreadProps(__spreadValues({}, updated[nextWWI]), { start: new Date(cur), end: new Date(nextNapStart) });
-          if (nextNapI >= 0) updated[nextNapI] = __spreadProps(__spreadValues({}, updated[nextNapI]), { start: new Date(nextNapStart), end: new Date(nextNapEnd) });
+          if (nextNapI >= 0) updated[nextNapI] = __spreadProps(__spreadValues({}, updated[nextNapI]), { start: new Date(nextNapStart), end: new Date(nextNapEnd), _recorded: false });
           cur = new Date(nextNapEnd);
         }
         const finalWWI = updated.findIndex(e => e.id === "ww-final");
@@ -1468,7 +1467,7 @@ function OtherChip({ item, collapsed, hidePencil, onEdit }) {
             item.volume && React.createElement("span", { style: { color: "#9B8FC0", fontWeight: 400 } }, " (", item.volume, item.unit, ")"))),
     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5, marginLeft: 8 } },
       React.createElement("span", { style: { color: "#9B8FC0", fontWeight: 400 } }, fmt12(strToDate(item.time))),
-      !collapsed && !hidePencil && React.createElement("span", { onClick: (e) => { e.stopPropagation(); if (onEdit) onEdit(); }, style: { fontSize: 11, color: PAL.primary, cursor: "pointer" } }, "\u270F\uFE0F")));
+      ));
 }
 
 function NapLogModal({ todaySleeps, schedule, scheduleSettings, activeSleep, onStartTimer, onSaveNap, onClose }) {
@@ -2107,7 +2106,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       const nextNap = napEvents.find((e) => !e._recorded && new Date(e.start) > now2);
       // Also check allTimelineItems for the actual next unlogged nap slot
       const nextNapFromTimeline = allTimelineItems.find((e) =>
-        e.type === "nap" && !e._recorded && (e.kind === "scheduled") && new Date(e.start) > now2
+        e.type === "nap" && e.kind === "scheduled" && new Date(e.start) > now2
       );
       const effectiveNextNap = nextNapFromTimeline || nextNap;
       if (effectiveNextNap) {
@@ -2172,7 +2171,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
               const wwI = newSched.findIndex(e => e.id === `ww-${si}`);
               const napI = newSched.findIndex(e => e.id === `nap-${si}`);
               if (wwI >= 0) newSched[wwI] = { ...newSched[wwI], start: new Date(cur), end: new Date(nns) };
-              if (napI >= 0) newSched[napI] = { ...newSched[napI], start: new Date(nns), end: new Date(nne) };
+              if (napI >= 0) newSched[napI] = { ...newSched[napI], start: new Date(nns), end: new Date(nne), _recorded: false };
               cur = new Date(nne);
             }
             const fwI = newSched.findIndex(e => e.id === "ww-final");
@@ -2319,7 +2318,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
                 const wwI3 = newSched3.findIndex(e => e.id === `ww-${si}`);
                 const napI3 = newSched3.findIndex(e => e.id === `nap-${si}`);
                 if (wwI3 >= 0) newSched3[wwI3] = { ...newSched3[wwI3], start: new Date(cur3), end: new Date(nns) };
-                if (napI3 >= 0) newSched3[napI3] = { ...newSched3[napI3], start: new Date(nns), end: new Date(nne) };
+                if (napI3 >= 0) newSched3[napI3] = { ...newSched3[napI3], start: new Date(nns), end: new Date(nne), _recorded: false };
                 cur3 = new Date(nne);
               }
               const fwI3 = newSched3.findIndex(e => e.id === "ww-final");
