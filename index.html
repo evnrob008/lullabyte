@@ -2679,6 +2679,7 @@ const wakeHour = (scheduleSettings && scheduleSettings.wakeTime) ? parseInt(sche
 // Build all events since midnight
 const allEvents = [];
 
+<<<<<<< HEAD
 // Feeds - only today’s logged feeds
 const todayStr = localDateStr();
 feeds.forEach(f => {
@@ -2700,7 +2701,50 @@ label = f.solids && f.solids.length ? f.solids.join(”, “) : “Solids”;
 }
 allEvents.push({ time: t, type: “feed”, icon: f.type === “solids” ? “\uD83E\uDD44” : “\uD83C\uDF7C”, label, bg: PAL.feedLight, color: PAL.feed });
 });
+||||||| parent of 40e1617 (iubib)
+  // Feeds
+  feeds.forEach(f => {
+    const t = strToDate(f.time);
+    if (t < midnight || t > now) return;
+    const vol = parseFloat(f.consumed || f.offered || 0);
+    const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
+    const offVol = parseFloat(f.offered || 0);
+    const offMl = f.unit === "oz" ? Math.round(offVol * 29.5735) : offVol;
+    let label = "";
+    if (f.type === "formula") {
+      label = ml > 0 ? (offMl > 0 && offMl !== ml ? `${ml}ml (of ${offMl}ml)` : `${ml}ml`) : `${offMl}ml offered`;
+    } else if (f.type === "breast") {
+      label = f.side ? `Breast (${f.side})${f.duration ? ` · ${f.duration}m` : ""}` : "Breast feed";
+    } else if (f.type === "solids") {
+      label = f.solids && f.solids.length ? f.solids.join(", ") : "Solids";
+    }
+    allEvents.push({ time: t, type: "feed", icon: f.type === "solids" ? "\uD83E\uDD44" : "\uD83C\uDF7C", label, bg: PAL.feedLight, color: PAL.feed });
+  });
+=======
+  // Feeds - only today's logged feeds
+  const todayStr = localDateStr();
+  feeds.forEach(f => {
+    // Use f.date if set, else derive from time
+    if (f.date && f.date !== todayStr) return;
+    const t = strToDate(f.time);
+    if (t < midnight || t > now) return;
+    const vol = parseFloat(f.consumed || f.offered || 0);
+    const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
+    const offVol = parseFloat(f.offered || 0);
+    const offMl = f.unit === "oz" ? Math.round(offVol * 29.5735) : offVol;
+    let label = "";
+    if (f.type === "formula") {
+      label = ml > 0 ? (offMl > 0 && offMl !== ml ? `${ml}ml (of ${offMl}ml)` : `${ml}ml`) : `${offMl}ml offered`;
+    } else if (f.type === "breast") {
+      label = f.side ? `Breast (${f.side})${f.duration ? ` · ${f.duration}m` : ""}` : "Breast feed";
+    } else if (f.type === "solids") {
+      label = f.solids && f.solids.length ? f.solids.join(", ") : "Solids";
+    }
+    allEvents.push({ time: t, type: "feed", icon: f.type === "solids" ? "\uD83E\uDD44" : "\uD83C\uDF7C", label, bg: PAL.feedLight, color: PAL.feed });
+  });
+>>>>>>> 40e1617 (iubib)
 
+<<<<<<< HEAD
 // Sleeps - only completed sleeps that overlap today
 sleeps.forEach(s => {
 if (!s.end) return; // skip ongoing
@@ -2724,6 +2768,52 @@ bg: isNight ? PAL.sleepLight : PAL.wakeLight,
 color: isNight ? PAL.primaryDark : PAL.sleep
 });
 });
+||||||| parent of 40e1617 (iubib)
+  // Sleeps (naps + night sleeps)
+  sleeps.forEach(s => {
+    const start = new Date(s.start);
+    const end = s.end ? new Date(s.end) : null;
+    const isNight = s.isNight || start.getHours() < wakeHour || start.getHours() >= 21;
+    // Include if started since midnight or ended after midnight
+    const relevantStart = start >= midnight ? start : (end && end > midnight ? midnight : null);
+    if (!relevantStart || relevantStart > now) return;
+    const durMins = end ? diffMins(isNight && start < midnight ? midnight : start, end > now ? now : end) : null;
+    const label = durMins ? durationLabel(durMins) : (end ? durationLabel(diffMins(start, end)) : "Ongoing");
+    allEvents.push({
+      time: start >= midnight ? start : midnight,
+      type: isNight ? "night" : "nap",
+      icon: isNight ? "\uD83C\uDF19" : "\uD83D\uDCA4",
+      label,
+      detail: end ? `${fmt12(start >= midnight ? start : midnight)} → ${fmt12(end)}` : `Started ${fmt12(start)}`,
+      bg: isNight ? PAL.sleepLight : PAL.wakeLight,
+      color: isNight ? PAL.primaryDark : PAL.sleep
+    });
+  });
+=======
+  // Sleeps - only completed sleeps that overlap today
+  sleeps.forEach(s => {
+    if (!s.end) return; // skip ongoing
+    const start = new Date(s.start);
+    const end = new Date(s.end);
+    const isNight = s.isNight || start.getHours() < wakeHour || start.getHours() >= 21;
+    // Include if it overlaps with today (started today or ended today)
+    const startsToday = start >= midnight && start <= now;
+    const endsToday = end >= midnight && end <= now;
+    if (!startsToday && !endsToday) return;
+    const relevantStart = start >= midnight ? start : midnight;
+    const durMins = diffMins(isNight && start < midnight ? midnight : start, end);
+    const label = durationLabel(durMins);
+    allEvents.push({
+      time: relevantStart,
+      type: isNight ? "night" : "nap",
+      icon: isNight ? "\uD83C\uDF19" : "\uD83D\uDCA4",
+      label,
+      detail: `${fmt12(relevantStart)} → ${fmt12(end)}`,
+      bg: isNight ? PAL.sleepLight : PAL.wakeLight,
+      color: isNight ? PAL.primaryDark : PAL.sleep
+    });
+  });
+>>>>>>> 40e1617 (iubib)
 
 // Medicines
 (others || []).forEach(o => {
