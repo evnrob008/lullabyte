@@ -2744,6 +2744,123 @@ function SettingsTab({ user, onLogout, pendingInviteCode, onInviteRedeemed, baby
     "Delete My Data"
   ), /* @__PURE__ */ React.createElement("button", { onClick: () => setShowPrivacy(false), style: { marginTop: 10, width: "100%", padding: "13px", borderRadius: 11, border: "none", background: PAL.primary, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" } }, "Done")));
 }
+function EventsTab({ feeds, sleeps, others, scheduleSettings }) {
+  const EVENT_TYPES = [
+    { id: "all", label: "All", icon: "\uD83D\uDCC5" },
+    { id: "feed", label: "Feeds", icon: "\uD83C\uDF7C" },
+    { id: "nap", label: "Naps", icon: "\uD83D\uDCA4" },
+    { id: "night", label: "Night Sleep", icon: "\uD83C\uDF19" },
+    { id: "medicine", label: "Medicine", icon: "\uD83D\uDC8A" }
+  ];
+  const [selected, setSelected] = useState("all");
+
+  const now = new Date();
+  const midnight = new Date(now); midnight.setHours(0,0,0,0);
+  const wakeHour = (scheduleSettings && scheduleSettings.wakeTime) ? parseInt(scheduleSettings.wakeTime.split(":")[0]) : 7;
+
+  // Build all events since midnight
+  const allEvents = [];
+
+  // Feeds
+  feeds.forEach(f => {
+    const t = strToDate(f.time);
+    if (t < midnight || t > now) return;
+    const vol = parseFloat(f.consumed || f.offered || 0);
+    const ml = f.unit === "oz" ? Math.round(vol * 29.5735) : vol;
+    const offVol = parseFloat(f.offered || 0);
+    const offMl = f.unit === "oz" ? Math.round(offVol * 29.5735) : offVol;
+    let label = "";
+    if (f.type === "formula") {
+      label = ml > 0 ? (offMl > 0 && offMl !== ml ? `${ml}ml (of ${offMl}ml)` : `${ml}ml`) : `${offMl}ml offered`;
+    } else if (f.type === "breast") {
+      label = f.side ? `Breast (${f.side})${f.duration ? ` · ${f.duration}m` : ""}` : "Breast feed";
+    } else if (f.type === "solids") {
+      label = f.solids && f.solids.length ? f.solids.join(", ") : "Solids";
+    }
+    allEvents.push({ time: t, type: "feed", icon: f.type === "solids" ? "\uD83E\uDD44" : "\uD83C\uDF7C", label, bg: PAL.feedLight, color: PAL.feed });
+  });
+
+  // Sleeps (naps + night sleeps)
+  sleeps.forEach(s => {
+    const start = new Date(s.start);
+    const end = s.end ? new Date(s.end) : null;
+    const isNight = s.isNight || start.getHours() < wakeHour || start.getHours() >= 21;
+    // Include if started since midnight or ended after midnight
+    const relevantStart = start >= midnight ? start : (end && end > midnight ? midnight : null);
+    if (!relevantStart || relevantStart > now) return;
+    const durMins = end ? diffMins(isNight && start < midnight ? midnight : start, end > now ? now : end) : null;
+    const label = durMins ? durationLabel(durMins) : (end ? durationLabel(diffMins(start, end)) : "Ongoing");
+    allEvents.push({
+      time: start >= midnight ? start : midnight,
+      type: isNight ? "night" : "nap",
+      icon: isNight ? "\uD83C\uDF19" : "\uD83D\uDCA4",
+      label,
+      detail: end ? `${fmt12(start >= midnight ? start : midnight)} → ${fmt12(end)}` : `Started ${fmt12(start)}`,
+      bg: isNight ? PAL.sleepLight : PAL.wakeLight,
+      color: isNight ? PAL.primaryDark : PAL.sleep
+    });
+  });
+
+  // Medicines
+  (others || []).forEach(o => {
+    const t = strToDate(o.time);
+    if (t < midnight || t > now) return;
+    const label = o.medicine + (o.volume ? ` (${o.volume}${o.unit})` : "");
+    allEvents.push({ time: t, type: "medicine", icon: "\uD83D\uDC8A", label, bg: "#F0EFF8", color: "#7B6FA0" });
+  });
+
+  allEvents.sort((a, b) => a.time - b.time);
+
+  const filtered = selected === "all" ? allEvents : allEvents.filter(e => e.type === selected);
+
+  const inp = { padding: "8px 12px", borderRadius: 20, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" };
+
+  return React.createElement("div", { style: { padding: "20px 16px 100px" } },
+    React.createElement("h2", { style: { margin: "0 0 16px", fontFamily: "'Figtree', sans-serif", fontSize: 22, color: PAL.text } }, "Today's Events"),
+    // Filter chips
+    React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" } },
+      EVENT_TYPES.map(et =>
+        React.createElement("button", {
+          key: et.id,
+          onClick: () => setSelected(et.id),
+          style: {
+            ...inp,
+            background: selected === et.id ? PAL.primary : PAL.soft,
+            color: selected === et.id ? "#fff" : PAL.muted
+          }
+        }, et.icon, " ", et.label)
+      )
+    ),
+    // Events list
+    filtered.length === 0
+      ? React.createElement("p", { style: { color: PAL.muted, fontSize: 14, textAlign: "center", marginTop: 40 } }, "No events logged yet")
+      : React.createElement("div", { style: { display: "flex", flexDirection: "column" } },
+          filtered.map((ev, i) => {
+            const prev = filtered[i - 1];
+            const gapMins = prev ? diffMins(prev.time, ev.time) : null;
+            const gapLabel = gapMins !== null && gapMins > 0 ? durationLabel(gapMins) : null;
+            return React.createElement(React.Fragment, { key: i },
+              gapLabel && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "4px 0" } },
+                React.createElement("div", { style: { flex: 1, height: 1, background: PAL.border } }),
+                React.createElement("span", { style: { fontSize: 11, color: PAL.muted, whiteSpace: "nowrap", fontWeight: 500 } }, gapLabel),
+                React.createElement("div", { style: { flex: 1, height: 1, background: PAL.border } })
+              ),
+              React.createElement("div", { style: { background: ev.bg, borderRadius: 12, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+                  React.createElement("span", { style: { fontSize: 20 } }, ev.icon),
+                  React.createElement("div", null,
+                    React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: ev.color || PAL.text } }, ev.label),
+                    ev.detail && React.createElement("div", { style: { fontSize: 12, color: PAL.muted, marginTop: 2 } }, ev.detail)
+                  )
+                ),
+                React.createElement("div", { style: { fontSize: 13, color: PAL.muted, fontWeight: 500, whiteSpace: "nowrap", marginLeft: 8 } }, fmt12(ev.time))
+              )
+            );
+          })
+        )
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [babyProfile, setBabyProfile] = useState(null);
@@ -3207,6 +3324,7 @@ function App() {
   }
   const tabs = [
     { id: "schedule", icon: "\u{1F4C5}", label: "Schedule" },
+    { id: "events", icon: "\u{1F552}", label: "Events" },
     { id: "summary", icon: "\u{1F4CA}", label: "History" },
     { id: "settings", icon: "\u{1F464}", label: "Account" }
   ];
@@ -3237,7 +3355,7 @@ function App() {
       onDeleteOther: deleteOther,
       onAddMedicine: addMedicine
     }
-  ), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps, moods, scheduleSettings, currentSchedule: schedule, onClearDay: clearDay, onDeleteSleep: deleteSleep, onDeleteFeed: deleteFeed }), tab === "settings" && /* @__PURE__ */ React.createElement(
+  ), tab === "events" && /* @__PURE__ */ React.createElement(EventsTab, { feeds, sleeps, others, scheduleSettings }), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps, moods, scheduleSettings, currentSchedule: schedule, onClearDay: clearDay, onDeleteSleep: deleteSleep, onDeleteFeed: deleteFeed }), tab === "settings" && /* @__PURE__ */ React.createElement(
     SettingsTab,
     {
       user,
