@@ -1454,7 +1454,7 @@ function FeedChip({ f, onEdit, collapsed, hidePencil }) {
     color: PAL.feed,
     fontWeight: 600,
     cursor: "pointer"
-  } }, /* @__PURE__ */ React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 4 } }, collapsed ? /* @__PURE__ */ React.createElement("span", null, isSolids ? "\u{1F944}" : "\u{1F37C}") : isSolids ? /* @__PURE__ */ React.createElement("span", null, "\u{1F944} ", f.solids && f.solids.length > 0 ? f.solids.join(", ") : "Solids") : /* @__PURE__ */ React.createElement("span", null, "\u{1F37C} ", displayMl, "ml", showOffered && /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, " (", offeredMl, "ml offered)"))), !collapsed && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5, marginLeft: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, fmt12(strToDate(f.time))), !hidePencil && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")));
+  } }, /* @__PURE__ */ React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 4 } }, collapsed ? /* @__PURE__ */ React.createElement("span", null, isSolids ? "\u{1F944}" : "\u{1F37C}") : isSolids ? /* @__PURE__ */ React.createElement("span", null, "\u{1F944} ", f.solids && f.solids.length > 0 ? f.solids.join(", ") : "Solids") : /* @__PURE__ */ React.createElement("span", null, "\u{1F37C} ", displayMl, "ml", showOffered && /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, " (of ", offeredMl, "ml)"))), !collapsed && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 5, marginLeft: 8 } }, /* @__PURE__ */ React.createElement("span", { style: { color: PAL.muted, fontWeight: 400 } }, fmt12(strToDate(f.time))), !hidePencil && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: PAL.primary } }, "\u270F\uFE0F")));
 }
 function OtherChip({ item, collapsed }) {
   return /* @__PURE__ */ React.createElement("div", { style: {
@@ -2912,7 +2912,15 @@ function App() {
       const saved = localStorage.getItem("lb_active_sleep");
       if (saved) {
         const p = JSON.parse(saved);
-        return __spreadProps(__spreadValues({}, p), { start: new Date(p.start) });
+        const start = new Date(p.start);
+        const ageHrs = (Date.now() - start) / 3600000;
+        const isToday = start.toDateString() === new Date().toDateString();
+        // Only restore if started today and less than 4 hours ago
+        if (isToday && ageHrs < 4) {
+          return __spreadProps(__spreadValues({}, p), { start });
+        }
+        // Stale — clear it
+        localStorage.removeItem("lb_active_sleep");
       }
     } catch (e) {
     }
@@ -3001,7 +3009,15 @@ function App() {
         try {
           const data = doc.data();
           if (data && data.start) {
-            setActiveSleep({ ...data, start: new Date(data.start) });
+            const napStart = new Date(data.start);
+            const ageHrs = (Date.now() - napStart) / 3600000;
+            const isToday = napStart.toDateString() === new Date().toDateString();
+            if (isToday && ageHrs < 4) {
+              setActiveSleep({ ...data, start: napStart });
+            } else {
+              // Stale Firestore doc — delete it and ignore
+              doc.ref.delete().catch(() => {});
+            }
           } else {
             setActiveSleep(null);
           }
