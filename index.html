@@ -2102,10 +2102,16 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
         napStatusValue = "\u2014";
       }
     } else {
-      const nextNap = napEvents.find((e) => new Date(e.start) > now2);
-      if (nextNap) {
+      // Only count unlogged naps - logged ones are already done
+      const nextNap = napEvents.find((e) => !e._recorded && new Date(e.start) > now2);
+      // Also check allTimelineItems for the actual next unlogged nap slot
+      const nextNapFromTimeline = allTimelineItems.find((e) =>
+        e.type === "nap" && !e._recorded && (e.kind === "scheduled") && new Date(e.start) > now2
+      );
+      const effectiveNextNap = nextNapFromTimeline || nextNap;
+      if (effectiveNextNap) {
         napStatusLabel = "Next nap";
-        const minsUntil = diffMins(now2, new Date(nextNap.start));
+        const minsUntil = diffMins(now2, new Date(effectiveNextNap.start));
         const h = Math.floor(minsUntil / 60);
         const m = minsUntil % 60;
         napStatusValue = h > 0 ? `${h}h ${m}m` : `${m}m`;
