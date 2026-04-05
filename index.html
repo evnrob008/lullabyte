@@ -776,8 +776,14 @@ function rebuildFromIndex(events, fromIdx, settings) {
     { id: "bed", type: "sleep", label: "Bedtime", start: finalBed, end: null, editable: true, originalFinalWW: ww }
   ];
 }
-const DEFAULT_SOLIDS = ["Meat", "Chicken", "Fish", "Fruit", "Green veg", "Red veg", "Yellow veg", "Oats", "Rice", "Pasta", "Bread", "Dairy", "Egg", "Legumes", "Other"];
-function FeedModal({ onSave, onClose, initial, onDelete }) {
+const SOLIDS_CATEGORIES = [
+  { label: "Meats", items: ["Beef", "Chicken", "Duck", "Fish", "Lamb", "Pork", "Salmon", "Tuna", "Turkey"] },
+  { label: "Fruits", items: ["Apple", "Avocado", "Banana", "Blueberry", "Cherry", "Grape", "Kiwi", "Mango", "Melon", "Orange", "Peach", "Pear", "Plum", "Prune", "Raspberry", "Strawberry", "Watermelon"] },
+  { label: "Vegetables", items: ["Broccoli", "Butternut squash", "Carrot", "Cauliflower", "Courgette", "Cucumber", "Green bean", "Kale", "Parsnip", "Pea", "Pepper", "Potato", "Pumpkin", "Spinach", "Sweet potato", "Tomato"] },
+  { label: "Other", items: ["Bread", "Butter", "Cheese", "Egg", "Lentils", "Milk", "Oats", "Pasta", "Rice", "Yogurt"] }
+];
+const DEFAULT_SOLIDS = SOLIDS_CATEGORIES.flatMap(c => c.items);
+function FeedModal({ onSave, onClose, initial, onDelete, customSolids: customSolidsProp, onAddCustomSolid }) {
   const [type, setType] = useState((initial == null ? void 0 : initial.type) || "formula");
   const [offered, setOffered] = useState((initial == null ? void 0 : initial.offered) || "");
   const [consumed, setConsumed] = useState((initial == null ? void 0 : initial.consumed) || "");
@@ -786,7 +792,7 @@ function FeedModal({ onSave, onClose, initial, onDelete }) {
   const [side, setSide] = useState((initial == null ? void 0 : initial.side) || "left");
   const [solids, setSolids] = useState((initial == null ? void 0 : initial.solids) || []);
   const [solidsSearch, setSolidsSearch] = useState("");
-  const [customSolids, setCustomSolids] = useState([]);
+  const [customSolids, setCustomSolids] = useState(customSolidsProp || []);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [duration, setDuration] = useState((initial == null ? void 0 : initial.duration) || "");
   const [feedDay, setFeedDay] = useState("today");
@@ -824,7 +830,8 @@ function FeedModal({ onSave, onClose, initial, onDelete }) {
     fontSize: t === "solids" ? 12 : 14,
     fontFamily: "inherit"
   } }, t === "formula" ? "\u{1F37C} Formula" : t === "breast" ? "\u{1F931} Breast" : "\u{1F963} Solids"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Time"), /* @__PURE__ */ React.createElement("input", { type: "time", style: __spreadProps(__spreadValues({}, inp), { display: "block", marginTop: 4 }), value: time, onChange: (e) => setTime(e.target.value) }), !initial && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } }, ["yesterday", "today"].map((d) => /* @__PURE__ */ React.createElement("button", { key: d, onClick: () => setFeedDay(d), style: { flex: 1, padding: "6px", borderRadius: 8, border: `1.5px solid ${feedDay === d ? PAL.feed : PAL.border}`, background: feedDay === d ? PAL.feedLight : "transparent", color: feedDay === d ? PAL.feed : PAL.muted, fontWeight: feedDay === d ? 700 : 400, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, d.charAt(0).toUpperCase() + d.slice(1))))), isSolids ? (() => {
-    const allOptions = [...DEFAULT_SOLIDS, ...customSolids];
+    const allCustom = customSolids.filter(c => !DEFAULT_SOLIDS.some(d => d.toLowerCase() === c.toLowerCase()));
+    const allOptions = [...DEFAULT_SOLIDS, ...allCustom];
     const q = solidsSearch.trim().toLowerCase();
     const filtered = q ? allOptions.filter((o) => o.toLowerCase().includes(q)) : allOptions;
     const exactMatch = allOptions.some((o) => o.toLowerCase() === q);
@@ -844,6 +851,7 @@ function FeedModal({ onSave, onClose, initial, onDelete }) {
         onClick: () => {
           const cap = solidsSearch.trim().charAt(0).toUpperCase() + solidsSearch.trim().slice(1);
           setCustomSolids((prev) => [...prev, cap]);
+          onAddCustomSolid && onAddCustomSolid(cap);
           toggleSolid(cap);
           setSolidsSearch("");
         },
@@ -851,19 +859,20 @@ function FeedModal({ onSave, onClose, initial, onDelete }) {
       },
       /* @__PURE__ */ React.createElement("span", { style: { fontSize: 18 } }, "\uFF0B"),
       /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: PAL.text } }, 'Add "', /* @__PURE__ */ React.createElement("strong", null, solidsSearch.trim()), '"')
-    ), filtered.map((opt) => {
-      const checked = solids.map((s) => s.toLowerCase()).includes(opt.toLowerCase());
-      return /* @__PURE__ */ React.createElement(
-        "div",
-        {
-          key: opt,
-          onClick: () => toggleSolid(opt),
-          style: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 10px", borderRadius: 10, background: checked ? PAL.feedLight : PAL.soft, border: `1.5px solid ${checked ? PAL.feed : PAL.border}` }
-        },
-        /* @__PURE__ */ React.createElement("div", { style: { width: 18, height: 18, borderRadius: 5, border: `2px solid ${checked ? PAL.feed : PAL.border}`, background: checked ? PAL.feed : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, checked && /* @__PURE__ */ React.createElement("span", { style: { color: "#fff", fontSize: 12, lineHeight: 1 } }, "\u2713")),
-        /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: PAL.text, fontWeight: checked ? 600 : 400 } }, opt)
-      );
-    }), filtered.length === 0 && !canAdd && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, textAlign: "center", padding: 8 } }, "No matches")));
+    ), q
+      ? filtered.sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase())).map((opt) => {
+          const checked = solids.map((s) => s.toLowerCase()).includes(opt.toLowerCase());
+          return /* @__PURE__ */ React.createElement("div", { key: opt, onClick: () => toggleSolid(opt), style: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 10px", borderRadius: 10, background: checked ? PAL.feedLight : PAL.soft, border: `1.5px solid ${checked ? PAL.feed : PAL.border}` } }, /* @__PURE__ */ React.createElement("div", { style: { width: 18, height: 18, borderRadius: 5, border: `2px solid ${checked ? PAL.feed : PAL.border}`, background: checked ? PAL.feed : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, checked && /* @__PURE__ */ React.createElement("span", { style: { color: "#fff", fontSize: 12, lineHeight: 1 } }, "\u2713")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: PAL.text, fontWeight: checked ? 600 : 400 } }, opt));
+        })
+      : SOLIDS_CATEGORIES.concat(allCustom.length ? [{ label: "Custom", items: allCustom.sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase())) }] : []).map(cat =>
+          /* @__PURE__ */ React.createElement(React.Fragment, { key: cat.label },
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: PAL.muted, letterSpacing: 1, textTransform: "uppercase", padding: "8px 2px 4px" } }, cat.label),
+            cat.items.sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase())).map((opt) => {
+              const checked = solids.map((s) => s.toLowerCase()).includes(opt.toLowerCase());
+              return /* @__PURE__ */ React.createElement("div", { key: opt, onClick: () => toggleSolid(opt), style: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 10px", borderRadius: 10, background: checked ? PAL.feedLight : PAL.soft, border: `1.5px solid ${checked ? PAL.feed : PAL.border}` } }, /* @__PURE__ */ React.createElement("div", { style: { width: 18, height: 18, borderRadius: 5, border: `2px solid ${checked ? PAL.feed : PAL.border}`, background: checked ? PAL.feed : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, checked && /* @__PURE__ */ React.createElement("span", { style: { color: "#fff", fontSize: 12, lineHeight: 1 } }, "\u2713")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14, color: PAL.text, fontWeight: checked ? 600 : 400 } }, opt));
+            })
+          )
+        ), filtered.length === 0 && !canAdd && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: PAL.muted, textAlign: "center", padding: 8 } }, "No matches")));
   })() : isBreast ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: PAL.muted } }, "Side", /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, ["left", "right", "both"].map((s) => /* @__PURE__ */ React.createElement("button", { key: s, onClick: () => setSide(s), style: {
     flex: 1,
     padding: "8px 0",
@@ -1815,7 +1824,7 @@ function LogOtherModal({ onClose, onSave, onDelete, medicines, onAddMedicine, in
 
 
 
-function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep, onDeleteFeed, onDeleteSleep, babyProfile, activeSleep, onSetActiveSleep, moods, onSaveMood, medicines, others, onSaveOther, onDeleteOther, onAddMedicine }) {
+function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedule, onSaveScheduleSettings, onSaveFeed, onSaveSleep, onDeleteFeed, onDeleteSleep, babyProfile, activeSleep, onSetActiveSleep, moods, onSaveMood, medicines, others, onSaveOther, onDeleteOther, onAddMedicine, customSolids, onAddCustomSolid }) {
   var _a;
   const [showSettings, setShowSettings] = useState(false);
   const [expandedPastEvents, setExpandedPastEvents] = useState(new Set());
@@ -2457,7 +2466,7 @@ function ScheduleTab({ schedule, scheduleSettings, feeds, sleeps, onUpdateSchedu
       onUpdateSchedule,
       onClose: () => setShowAI(false)
     }
-  ), editEvent && /* @__PURE__ */ React.createElement(EditEventModal, { event: editEvent, scheduleSettings, allEvents: schedule, onSave: onUpdateSchedule, onSaveSettings: onSaveScheduleSettings, onClose: () => setEditEvent(null) }), (showFeedModal || editFeed) && /* @__PURE__ */ React.createElement(FeedModal, { initial: editFeed, onSave: onSaveFeed, onDelete: editFeed ? onDeleteFeed : null, onClose: () => {
+  ), editEvent && /* @__PURE__ */ React.createElement(EditEventModal, { event: editEvent, scheduleSettings, allEvents: schedule, onSave: onUpdateSchedule, onSaveSettings: onSaveScheduleSettings, onClose: () => setEditEvent(null) }), (showFeedModal || editFeed) && /* @__PURE__ */ React.createElement(FeedModal, { initial: editFeed, onSave: onSaveFeed, onDelete: editFeed ? onDeleteFeed : null, customSolids: customSolids || [], onAddCustomSolid, onClose: () => {
     setShowFeedModal(false);
     setEditFeed(null);
   } }), showNightSleep && /* @__PURE__ */ React.createElement(SleepModal, { isNight: true, onSave: onSaveSleep, onClose: () => setShowNightSleep(false) }));
@@ -2977,6 +2986,9 @@ function App() {
   const [others, setOthers] = useState(() => {
     try { const o = localStorage.getItem("lb_others"); return o ? JSON.parse(o) : []; } catch(e) { return []; }
   });
+  const [customSolids, setCustomSolids] = useState(() => {
+    try { const s = localStorage.getItem("lb_custom_solids"); return s ? JSON.parse(s) : []; } catch(e) { return []; }
+  });
   const [moods, setMoods] = useState(() => {
     try {
       const m = localStorage.getItem("lb_moods");
@@ -3000,6 +3012,16 @@ function App() {
       localStorage.setItem("lb_others", JSON.stringify(next));
       const uid = getDataUid ? getDataUid() : localStorage.getItem("lb_data_uid") || "default";
       fsSetArray(uid, "others", next);
+      return next;
+    });
+  };
+  const addCustomSolid = (name) => {
+    setCustomSolids(prev => {
+      if (prev.some(s => s.toLowerCase() === name.toLowerCase())) return prev;
+      const next = [...prev, name];
+      localStorage.setItem("lb_custom_solids", JSON.stringify(next));
+      const uid = getDataUid();
+      fsSet(uid, "customSolids", next);
       return next;
     });
   };
@@ -3430,7 +3452,9 @@ function App() {
       others,
       onSaveOther: saveOther,
       onDeleteOther: deleteOther,
-      onAddMedicine: addMedicine
+      onAddMedicine: addMedicine,
+      customSolids,
+      onAddCustomSolid: addCustomSolid
     }
   ), tab === "events" && /* @__PURE__ */ React.createElement(EventsTab, { feeds, sleeps, others, scheduleSettings }), tab === "summary" && /* @__PURE__ */ React.createElement(SummaryTab, { feeds, sleeps, moods, scheduleSettings, currentSchedule: schedule, onClearDay: clearDay, onDeleteSleep: deleteSleep, onDeleteFeed: deleteFeed }), tab === "settings" && /* @__PURE__ */ React.createElement(
     SettingsTab,
