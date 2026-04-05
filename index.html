@@ -3165,6 +3165,18 @@ function App() {
           const data = JSON.parse(doc.data().value);
           setSleeps(data);
           localStorage.setItem(`lb_sleeps_${uid}`, JSON.stringify(data));
+          // If partner ended the active timer, clear it on this device
+          const currentTimer = activeSleepRef.current;
+          if (currentTimer && currentTimer.start) {
+            const timerStart = new Date(currentTimer.start);
+            const matchingSleep = data.find(s =>
+              s.end && Math.abs(new Date(s.start) - timerStart) < 10000
+            );
+            if (matchingSleep) {
+              _isLocalEnd = true; // prevent activeSleep listener from double-saving
+              setActiveSleep(null);
+            }
+          }
         } catch (e) {}
       }
     }, (err) => console.error("❌ sleeps listener error:", err.code, err.message)));
@@ -3214,6 +3226,13 @@ function App() {
         if (_isLocalEnd) { _isLocalEnd = false; return; } // this device already saved
         const current = activeSleepRef.current;
         if (current && current.start) {
+          // Check if the sleep was already saved (e.g. by partner)
+          const timerStart = new Date(current.start);
+          const savedSleeps = JSON.parse(localStorage.getItem(`lb_sleeps_${uid}`) || "[]");
+          const alreadySaved = savedSleeps.some(s =>
+            s.end && Math.abs(new Date(s.start) - timerStart) < 10000
+          );
+          if (alreadySaved) { setActiveSleep(null); return; }
           const napEnd = new Date();
           const napStart = new Date(current.start);
           const napId = Date.now();
