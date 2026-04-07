@@ -2542,9 +2542,14 @@ function SummaryTab({ feeds, sleeps, moods, scheduleSettings, currentSchedule, o
   const dayData = days.map((d) => {
     const next = new Date(d);
     next.setDate(next.getDate() + 1);
-    const dStr = d.toISOString().slice(0, 10);
+    const dStr = localDateStr(d);
     const dayFeeds = feeds.filter((f) => {
       if (f.type !== "formula" && f.type !== "solids") return false;
+      if (f.date) return f.date === dStr;
+      const t = strToDate(f.time, d);
+      return t >= d && t < next;
+    });
+    const allDayFeeds = feeds.filter((f) => {
       if (f.date) return f.date === dStr;
       const t = strToDate(f.time, d);
       return t >= d && t < next;
@@ -2582,14 +2587,14 @@ function SummaryTab({ feeds, sleeps, moods, scheduleSettings, currentSchedule, o
       const countEnd = sEnd > next ? next : sEnd;
       nightSleepMins += Math.max(0, diffMins(d, countEnd));
     });
-    const dStr2 = d.toISOString().slice(0, 10);
+    const dStr2 = localDateStr(d);
     const isToday = dStr2 === todayStr;
     const daySchedule = isToday ? currentSchedule || [] : archives[dStr2] || [];
     const parsedSchedule = daySchedule.map((e) => __spreadProps(__spreadValues({}, e), {
       start: e.start ? new Date(e.start) : null,
       end: e.end ? new Date(e.end) : null
     }));
-    return { date: d, consumedMl, offeredMl, solidsMeals, dayNapMins, nightSleepMins, feeds: dayFeeds, sleeps: daySleeps, schedule: parsedSchedule, mood: (moods && moods[dStr2]) || null };
+    return { date: d, consumedMl, offeredMl, solidsMeals, dayNapMins, nightSleepMins, feeds: allDayFeeds, sleeps: daySleeps, schedule: parsedSchedule, mood: (moods && moods[dStr2]) || null };
   });
   const BarChart = ({ data, v1Key, v2Key, c1, c2, c1Label, c2Label, stacked, onToggleStacked, colW, spoonKey }) => {
     const max = Math.max(...data.map((d) => stacked ? (d[v1Key] || 0) + (d[v2Key] || 0) : Math.max(d[v1Key] || 0, d[v2Key] || 0)), 1);
@@ -3135,7 +3140,9 @@ function App() {
     return null;
   });
   const activeSleepRef = useRef(activeSleep);
+  const sleepsRef = useRef(sleeps);
   useEffect(() => { activeSleepRef.current = activeSleep; }, [activeSleep]);
+  useEffect(() => { sleepsRef.current = sleeps; }, [sleeps]);
   // On startup, if activeSleep is restored but very old (>8hrs), auto-save and clear it
   useEffect(() => {
     const current = activeSleepRef.current;
@@ -3244,17 +3251,24 @@ function App() {
           }
         } catch (e) {}
       } else {
-        // Doc was deleted — if we have an active timer, auto-save the sleep
+        // Doc was deleted — partner ended the timer, or this device ended it
         if (_isLocalEnd) { _isLocalEnd = false; return; } // this device already saved
         const current = activeSleepRef.current;
-        if (current && current.start) {
-          // Check if the sleep was already saved (e.g. by partner)
+        if (!current || !current.start) { setActiveSleep(null); return; }
+        // Delay to allow the sleeps Firestore update to arrive first
+        setTimeout(() => {
           const timerStart = new Date(current.start);
-          const savedSleeps = JSON.parse(localStorage.getItem(`lb_sleeps_${uid}`) || "[]");
-          const alreadySaved = savedSleeps.some(s =>
-            s.end && Math.abs(new Date(s.start) - timerStart) < 10000
+          // Check current sleeps state (via ref) for a matching completed sleep
+          const currentSleeps = sleepsRef.current || [];
+          const alreadySaved = currentSleeps.some(s =>
+            s.end && Math.abs(new Date(s.start) - timerStart) < 15000
           );
-          if (alreadySaved) { setActiveSleep(null); return; }
+          if (alreadySaved) {
+            // Partner already saved it — just clear our timer
+            setActiveSleep(null);
+            return;
+          }
+          // Partner did not save it — save it ourselves
           const napEnd = new Date();
           const napStart = new Date(current.start);
           const napId = Date.now();
@@ -3262,16 +3276,15 @@ function App() {
           const startH = napStart.getHours();
           const isNight = startH < wakeH || startH >= 21;
           setSleeps((prev) => {
-            // Dedup: don't add if a sleep with same start time already exists
-            const alreadyExists = prev.some(s => Math.abs(new Date(s.start) - napStart) < 5000);
+            const alreadyExists = prev.some(s => Math.abs(new Date(s.start) - napStart) < 15000 && s.end);
             if (alreadyExists) return prev;
             const next = [...prev, { id: napId, start: napStart, end: napEnd, isNight, autoSaved: true }];
             const writeUid = localStorage.getItem("lb_data_uid") || JSON.parse(localStorage.getItem("lb_user") || "{}").uid || "default";
             fsSetArray(writeUid, "sleeps", next);
             return next;
           });
-        }
-        setActiveSleep(null);
+          setActiveSleep(null);
+        }, 2000); // wait 2s for partner's sleep save to arrive
       }
     }, (err) => console.error("❌ activeSleep listener error:", err.code, err.message)));
     return () => unsubs.forEach((u2) => u2());
